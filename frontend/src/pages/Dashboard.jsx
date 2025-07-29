@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react'
 import { useUser } from '../store/UserContext'
-import { useBooking } from '../store/BookingContext'
+import { fetchStations, createStation } from '../services/StationServices'
 
 function Dashboard() {
   const { currentUser, isAdmin, isStationMaster } = useUser()
-  const { stations, bookings, addStation } = useBooking()
-  
+
+  const [stations, setStations] = useState([])
+  const [bookings, setBookings] = useState([]) // You may want to fetch bookings as well
   const [showAddStation, setShowAddStation] = useState(false)
   const [newStation, setNewStation] = useState({
     city: '',
@@ -15,6 +16,54 @@ function Dashboard() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
+
+  // Fetch stations on mount
+  useEffect(() => {
+    loadStations()
+  }, [])
+
+  const loadStations = async () => {
+    setLoading(true)
+    setError('')
+    try {
+      const data = await fetchStations()
+      setStations(data)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleAddStation = async (e) => {
+    e.preventDefault()
+    setLoading(true)
+    setError('')
+    setSuccess('')
+    try {
+      if (!newStation.city || !newStation.stationName || !newStation.stationId) {
+        setError('Please fill in all fields')
+        return
+      }
+      // Check if station ID already exists in the fetched list
+      const existingStation = stations.find(s => s.stationId === newStation.stationId)
+      if (existingStation) {
+        setError('Station ID already exists')
+        return
+      }
+      // Get token from localStorage
+      const token = localStorage.getItem('busBookingToken')
+      await createStation(newStation, token)
+      setSuccess('Station added successfully!')
+      setNewStation({ city: '', stationName: '', stationId: '' })
+      setShowAddStation(false)
+      await loadStations()
+    } catch (err) {
+      setError(err.message || 'Failed to add station. Please try again.')
+    } finally {
+      setLoading(false)
+    }
+  }
 
   // Calculate statistics
   const totalBookings = bookings.length
@@ -35,36 +84,6 @@ function Dashboard() {
   const popularRoutes = Object.entries(routeStats)
     .sort(([,a], [,b]) => b - a)
     .slice(0, 5)
-
-  const handleAddStation = async (e) => {
-    e.preventDefault()
-    setLoading(true)
-    setError('')
-    setSuccess('')
-
-    try {
-      if (!newStation.city || !newStation.stationName || !newStation.stationId) {
-        setError('Please fill in all fields')
-        return
-      }
-
-      // Check if station ID already exists
-      const existingStation = stations.find(s => s.stationId === newStation.stationId)
-      if (existingStation) {
-        setError('Station ID already exists')
-        return
-      }
-
-      addStation(newStation)
-      setSuccess('Station added successfully!')
-      setNewStation({ city: '', stationName: '', stationId: '' })
-      setShowAddStation(false)
-    } catch (err) {
-      setError('Failed to add station. Please try again.')
-    } finally {
-      setLoading(false)
-    }
-  }
 
   const formatCurrency = (amount) => {
     return `PKR ${amount.toLocaleString()}`

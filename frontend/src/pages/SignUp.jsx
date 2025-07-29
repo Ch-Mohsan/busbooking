@@ -24,36 +24,36 @@ function SignUp() {
   }
 
   const handleSubmit = async (e) => {
-    e.preventDefault()
-    setError('')
-    setLoading(true)
+    e.preventDefault();
+    setError('');
+    setLoading(true);
 
     try {
       if (!formData.username || !formData.email || !formData.password) {
-        setError('Please fill in all fields')
-        return
+        setError('Please fill in all fields');
+        return;
       }
       if (formData.password !== formData.confirmPassword) {
-        setError('Passwords do not match')
-        return
+        setError('Passwords do not match');
+        return;
       }
       if (formData.password.length < 6) {
-        setError('Password must be at least 6 characters')
-        return
+        setError('Password must be at least 6 characters');
+        return;
       }
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      signup({
+      await signup({
         username: formData.username,
         email: formData.email,
-        role: formData.role
-      })
-      navigate('/dashboard')
+        password: formData.password,
+        role: formData.role,
+      });
+      navigate('/dashboard');
     } catch (err) {
-      setError('Registration failed. Please try again.')
+      setError('Registration failed. Please try again.');
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#f8fafc]">

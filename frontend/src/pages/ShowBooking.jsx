@@ -4,39 +4,18 @@ import { useBooking } from '../store/BookingContext'
 
 function ShowBooking() {
   const { currentUser, isAdmin, isStationMaster } = useUser()
-  const { getUserBookings, getAllBookings, getBookingsByStation, stations } = useBooking()
-  const [bookings, setBookings] = useState([])
-  const [loading, setLoading] = useState(true)
+  const { bookings, loading, fetchUserBookings, fetchAllBookings } = useBooking();
   const [filter, setFilter] = useState('all') // all, confirmed, cancelled
   const [selectedStation, setSelectedStation] = useState('')
 
   useEffect(() => {
-    loadBookings()
-  }, [currentUser, filter, selectedStation])
-
-  const loadBookings = () => {
-    setLoading(true)
-    
-    let userBookings = []
-    
     if (isAdmin()) {
-      userBookings = getAllBookings()
-    } else if (isStationMaster()) {
-      userBookings = selectedStation 
-        ? getBookingsByStation(selectedStation)
-        : getAllBookings()
+      fetchAllBookings();
     } else {
-      userBookings = getUserBookings(currentUser?.id)
+      fetchUserBookings();
     }
-
-    // Apply filter
-    if (filter !== 'all') {
-      userBookings = userBookings.filter(booking => booking.status === filter)
-    }
-
-    setBookings(userBookings)
-    setLoading(false)
-  }
+    // eslint-disable-next-line
+  }, [currentUser, filter, selectedStation]);
 
   const getStatusBadge = (status) => {
     const statusConfig = {
@@ -142,11 +121,12 @@ function ShowBooking() {
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="">All Stations</option>
-                  {stations.map(station => (
+                  {/* stations are not directly available in BookingContext, so this filter is not functional yet */}
+                  {/* {stations.map(station => (
                     <option key={station.id} value={station.stationId}>
                       {station.city} - {station.stationName}
                     </option>
-                  ))}
+                  ))} */}
                 </select>
               </div>
             )}

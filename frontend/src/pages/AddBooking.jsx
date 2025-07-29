@@ -7,7 +7,7 @@ function AddBooking() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const { currentUser } = useUser()
-  const { stations, getAvailableSeats, createBooking, calculateFare } = useBooking()
+  const { stations, getAvailableSeats, createBooking, calculateFare, fetchUserBookings } = useBooking()
   
   const [formData, setFormData] = useState({
     travelType: 'economy',
@@ -95,9 +95,10 @@ function AddBooking() {
         userId: currentUser.id,
         username: currentUser.username
       }
-      const newBooking = createBooking(bookingData)
-      setSuccess(`Booking confirmed! Booking ID: ${newBooking.id}`)
-      setTimeout(() => { navigate('/showbooking') }, 2000)
+      const newBooking = await createBooking(bookingData);
+      setSuccess(`Booking confirmed! Booking ID: ${newBooking._id || newBooking.id}`);
+      await fetchUserBookings();
+      setTimeout(() => { navigate('/showbooking'); }, 2000);
     } catch (err) {
       setError(err.message || 'Booking failed. Please try again.')
     } finally {

@@ -21,31 +21,26 @@ function Login() {
   }
 
   const handleSubmit = async (e) => {
-    e.preventDefault()
-    setError('')
-    setLoading(true)
+    e.preventDefault();
+    setError('');
+    setLoading(true);
 
     try {
       if (formData.email && formData.password) {
-        await new Promise(resolve => setTimeout(resolve, 1000))
-        let role = 'user'
-        if (formData.email.includes('admin')) role = 'admin'
-        else if (formData.email.includes('station')) role = 'station_master'
-        login({
-          username: formData.email.split('@')[0],
+        await login({
           email: formData.email,
-          role: role
-        })
-        navigate('/dashboard')
+          password: formData.password,
+        });
+        navigate('/dashboard');
       } else {
-        setError('Please fill in all fields')
+        setError('Please fill in all fields');
       }
     } catch (err) {
-      setError('Login failed. Please try again.')
+      setError('Login failed. Please try again.');
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#f8fafc]">
