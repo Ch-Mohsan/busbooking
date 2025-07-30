@@ -40,44 +40,61 @@ export const BookingProvider = ({ children }) => {
   }
 
   // Get available seats for a route
-  const getAvailableSeats = async (fromStation, toStation, date, time) => {
-    try {
-      if (!currentUser?.token) {
-        console.warn(currentUser.token, 'No user token found, returning mock data for available seats')
-        // Return mock data if no user token
-        const totalSeats = 40
-        const seats = []
-        for (let i = 1; i <= totalSeats; i++) {
-          seats.push({
-            number: i,
-            available: Math.random() > 0.3 // 70% chance of being available
-          })
-        }
-        return seats
-      }
-
-      const seatsData = await BookingServices.getAvailableSeats(
-        fromStation, 
-        toStation, 
-        date, 
-        time, 
-        currentUser.token
-      )
-      return seatsData.seats || seatsData
-    } catch (err) {
-      console.error('Error getting available seats:', err)
-      // Return mock data on error
+// Get available seats for a route
+const getAvailableSeats = async (fromStation, toStation, date, time) => {
+  try {
+    if (!currentUser?.token) {
+      console.warn('No user token found, returning mock data for available seats')
+      // Return mock data if no user token
       const totalSeats = 40
       const seats = []
       for (let i = 1; i <= totalSeats; i++) {
         seats.push({
           number: i,
-          available: Math.random() > 0.3
+          available: Math.random() > 0.3 // 70% chance of being available
         })
       }
       return seats
     }
+
+    const seatsData = await BookingServices.getAvailableSeats(
+      fromStation, 
+      toStation, 
+      date, 
+      time, 
+      currentUser.token
+    )
+    
+    // Handle different response formats from backend
+    if (seatsData.availableSeats) {
+      // Backend returns { availableSeats: [1, 2, 3, ...] }
+      const totalSeats = 40
+      const seats = []
+      for (let i = 1; i <= totalSeats; i++) {
+        seats.push({
+          number: i,
+          available: seatsData.availableSeats.includes(i)
+        })
+      }
+      return seats
+    }
+    
+    // Return as is if already in expected format
+    return seatsData.seats || seatsData
+  } catch (err) {
+    console.error('Error getting available seats:', err)
+    // Return mock data on error
+    const totalSeats = 40
+    const seats = []
+    for (let i = 1; i <= totalSeats; i++) {
+      seats.push({
+        number: i,
+        available: Math.random() > 0.3
+      })
+    }
+    return seats
   }
+}
 
   // Calculate fare for a route
   const calculateFare = async (fromStation, toStation, travelType) => {
