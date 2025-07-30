@@ -4,18 +4,33 @@ import { useBooking } from '../store/BookingContext'
 
 function ShowBooking() {
   const { currentUser, isAdmin, isStationMaster } = useUser()
-  const { bookings, loading, fetchUserBookings, fetchAllBookings } = useBooking();
+  const { userBookings, stations, loading, fetchUserBookings, error } = useBooking(); // Added stations from context
   const [filter, setFilter] = useState('all') // all, confirmed, cancelled
   const [selectedStation, setSelectedStation] = useState('')
 
+  // Safe fallback for bookings - ensure it's always an array
+  const bookings = userBookings || []
+
   useEffect(() => {
-    if (isAdmin()) {
-      fetchAllBookings();
-    } else {
-      fetchUserBookings();
+    if (currentUser?.token) {
+      if (isAdmin()) {
+        // fetchAllBookings(); // This function doesn't exist in your BookingContext
+        fetchUserBookings(); // Using available function for now
+      } else {
+        fetchUserBookings();
+      }
     }
     // eslint-disable-next-line
   }, [currentUser, filter, selectedStation]);
+
+  // Helper function to get station name from station ID
+  const getStationName = (stationId) => {
+    const station = stations.find(s => s.stationId === stationId || s._id === stationId)
+    if (station) {
+      return `${station.city} - ${station.stationName}`
+    }
+    return stationId // fallback to showing the ID if station not found
+  }
 
   const getStatusBadge = (status) => {
     const statusConfig = {
@@ -63,6 +78,31 @@ function ShowBooking() {
     return `${displayHour}:${minutes} ${ampm}`
   }
 
+  // Filter bookings based on selected filter and station
+  const filteredBookings = bookings.filter(booking => {
+    // Filter by status
+    if (filter !== 'all' && booking.status !== filter) {
+      return false
+    }
+    
+    // Filter by station (check both from and to stations)
+    if (selectedStation && selectedStation !== '') {
+      const matchesFromStation = booking.fromStation === selectedStation
+      const matchesToStation = booking.toStation === selectedStation
+      if (!matchesFromStation && !matchesToStation) {
+        return false
+      }
+    }
+    
+    return true
+  })
+
+  // Get all available stations from stations context instead of just from bookings
+  const getAllStations = () => {
+    // Return all stations from the stations context
+    return stations || []
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -72,6 +112,26 @@ function ShowBooking() {
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
           </svg>
           <p className="text-gray-600">Loading bookings...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <svg className="h-12 w-12 text-red-500 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">Error Loading Bookings</h3>
+          <p className="text-gray-600 mb-4">{error}</p>
+          <button 
+            onClick={() => fetchUserBookings()}
+            className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
+          >
+            Try Again
+          </button>
         </div>
       </div>
     )
@@ -121,12 +181,11 @@ function ShowBooking() {
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="">All Stations</option>
-                  {/* stations are not directly available in BookingContext, so this filter is not functional yet */}
-                  {/* {stations.map(station => (
-                    <option key={station.id} value={station.stationId}>
+                  {getAllStations().map(station => (
+                    <option key={station._id || station.stationId} value={station._id || station.stationId}>
                       {station.city} - {station.stationName}
                     </option>
-                  ))} */}
+                  ))}
                 </select>
               </div>
             )}
@@ -134,23 +193,25 @@ function ShowBooking() {
         </div>
 
         {/* Bookings List */}
-        {bookings.length === 0 ? (
+        {filteredBookings.length === 0 ? (
           <div className="bg-white rounded-lg shadow-md p-12 text-center">
             <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
             </svg>
             <h3 className="mt-2 text-sm font-medium text-gray-900">No bookings found</h3>
             <p className="mt-1 text-sm text-gray-500">
-              {isAdmin() || isStationMaster() 
+              {filter !== 'all' || selectedStation 
                 ? 'No bookings match your current filters.'
-                : 'You haven\'t made any bookings yet.'
+                : isAdmin() || isStationMaster() 
+                  ? 'No bookings available.'
+                  : 'You haven\'t made any bookings yet.'
               }
             </p>
           </div>
         ) : (
           <div className="space-y-6">
-            {bookings.map((booking) => (
-              <div key={booking.id} className="bg-white rounded-lg shadow-md overflow-hidden">
+            {filteredBookings.map((booking) => (
+              <div key={booking._id || booking.id} className="bg-white rounded-lg shadow-md overflow-hidden">
                 <div className="p-6">
                   {/* Booking Header */}
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
@@ -162,10 +223,10 @@ function ShowBooking() {
                       </div>
                       <div>
                         <h3 className="text-lg font-semibold text-gray-900">
-                          Booking #{booking.id}
+                          Booking #{booking._id?.slice(-6) || booking.id}
                         </h3>
                         <p className="text-sm text-gray-500">
-                          Booked on {formatDate(booking.createdAt)}
+                          Booked on {formatDate(booking.createdAt || booking.bookingDate)}
                         </p>
                       </div>
                     </div>
@@ -185,7 +246,7 @@ function ShowBooking() {
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                           </svg>
                           <span className="text-sm text-gray-600">
-                            <strong>From:</strong> {booking.fromStation}
+                            <strong>From:</strong> {getStationName(booking.fromStation)}
                           </span>
                         </div>
                         <div className="flex items-center">
@@ -193,7 +254,7 @@ function ShowBooking() {
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                           </svg>
                           <span className="text-sm text-gray-600">
-                            <strong>To:</strong> {booking.toStation}
+                            <strong>To:</strong> {getStationName(booking.toStation)}
                           </span>
                         </div>
                         <div className="flex items-center">
@@ -225,13 +286,13 @@ function ShowBooking() {
                         <div className="flex justify-between">
                           <span className="text-sm text-gray-600">Seats:</span>
                           <span className="text-sm font-medium text-gray-900">
-                            {booking.seats.map(seat => seat.number).join(', ')}
+                            {(booking.seats || []).map(seat => seat.number).join(', ')}
                           </span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-sm text-gray-600">Total Amount:</span>
                           <span className="text-sm font-bold text-green-600">
-                            PKR {booking.totalAmount.toLocaleString()}
+                            PKR {(booking.totalAmount || 0).toLocaleString()}
                           </span>
                         </div>
                         <div className="flex justify-between">
@@ -250,7 +311,7 @@ function ShowBooking() {
                     <div className="grid grid-cols-8 gap-2">
                       {Array.from({ length: 40 }, (_, i) => {
                         const seatNumber = i + 1
-                        const isBooked = booking.seats.some(seat => seat.number === seatNumber)
+                        const isBooked = (booking.seats || []).some(seat => seat.number === seatNumber)
                         return (
                           <div
                             key={seatNumber}

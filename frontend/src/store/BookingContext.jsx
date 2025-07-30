@@ -212,6 +212,24 @@ const getAvailableSeats = async (fromStation, toStation, date, time) => {
       throw err
     }
   }
+  const fetchAllBookings = async () => {
+  try {
+    if (!currentUser?.token) {
+      setUserBookings([])
+      return
+    }
+
+    setLoading(true)
+    const bookingsData = await BookingServices.getAllBookings(currentUser.token)
+    setUserBookings(bookingsData.bookings || bookingsData)
+  } catch (err) {
+    console.error('Error fetching all bookings:', err)
+    setError(err.message)
+  } finally {
+    setLoading(false)
+  }
+}
+
 
   const contextValue = {
     // Data
@@ -228,6 +246,7 @@ const getAvailableSeats = async (fromStation, toStation, date, time) => {
     cancelBooking,
     getBookingById,
     loadStations, // This allows components to refresh stations
+    fetchAllBookings, // Add this line
     
     // Helper function to refresh stations after adding new ones
     refreshStations: loadStations
