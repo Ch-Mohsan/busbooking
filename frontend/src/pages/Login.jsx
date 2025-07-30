@@ -99,12 +99,12 @@ function Login() {
             </Link>
           </p>
         </div>
-        <div className="mt-6 p-3 bg-[#f8fafc] rounded text-xs text-[#065084]">
+        {/* <div className="mt-6 p-3 bg-[#f8fafc] rounded text-xs text-[#065084]">
           <div className="mb-1 font-semibold">Demo Credentials:</div>
           <div>Admin: <b>admin@demo.com</b> / password</div>
           <div>Station Master: <b>station@demo.com</b> / password</div>
           <div>User: <b>user@demo.com</b> / password</div>
-        </div>
+        </div> */}
       </div>
     </div>
   )

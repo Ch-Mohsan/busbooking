@@ -67,7 +67,7 @@ function Home() {
               required
             >
               <option value="">To</option>
-              {stations.map(station => (
+              {stations?.stations.map(station => (
                 <option key={station.id} value={station.stationId}>
                   {station.city}
                 </option>
