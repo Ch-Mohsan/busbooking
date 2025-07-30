@@ -76,3 +76,30 @@ exports.calculateFare = async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 }
+exports.getAvailableSeats = async (req, res) => {
+  try {
+    const { fromStation, toStation, date, time } = req.query;
+
+    if (!fromStation || !toStation || !date || !time) {
+      return res.status(400).json({ message: 'Missing required query parameters' });
+    }
+
+    // Get booked seats
+    const bookings = await Booking.find({
+      fromStation,
+      toStation,
+      date,
+      time
+    });
+
+    const bookedSeatNumbers = bookings.flatMap(b => b.seats.map(s => s.number));
+
+    // Assume bus has 40 seats (or however many)
+    const allSeats = Array.from({ length: 40 }, (_, i) => i + 1);
+    const availableSeats = allSeats.filter(seat => !bookedSeatNumbers.includes(seat));
+
+    res.json({ availableSeats });
+  } catch (err) {
+    res.status(500).json({ message: 'Server error', error: err.message });
+  }
+};

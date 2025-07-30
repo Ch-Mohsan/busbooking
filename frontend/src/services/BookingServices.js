@@ -122,25 +122,17 @@ export const cancelBooking = async (bookingId, token) => {
 };
 
 // Get available seats for a specific route and time
-export const getAvailableSeats = async (fromStation, toStation, date, time, token) => {
-  try {
-    const params = new URLSearchParams({
-      fromStation,
-      toStation,
-      date,
-      time
-    });
+export const getAvailableSeats = async (params, token) => {
+  const query = new URLSearchParams(params).toString();
+  const response = await fetch(`${API_URL}/bookings/available-seats?${query}`, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
 
-    const response = await fetch(`${API_BASE_URL}/bookings/seats/available?${params}`, {
-      method: 'GET',
-      headers: getAuthHeaders(token)
-    });
-    
-    return await handleResponse(response);
-  } catch (error) {
-    console.error('Get available seats error:', error);
-    throw error;
+  if (!response.ok) {
+    throw new Error(`HTTP error! status: ${response.status}`);
   }
+
+  return await response.json();
 };
 
 // Get bookings by station (for station masters)

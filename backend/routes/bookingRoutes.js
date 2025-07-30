@@ -7,6 +7,8 @@ router.post('/', protect, bookingController.createBooking);
 router.get('/my', protect, bookingController.getUserBookings);
 router.get('/', protect, adminOrStationMaster, bookingController.getAllBookings);
 router.get('/fare/calculate', bookingController.calculateFare)
+router.get('/available-seats', protect, bookingController.getAvailableSeats);
+
 
 
 module.exports = router; 
