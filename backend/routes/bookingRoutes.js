@@ -6,5 +6,7 @@ const { protect, adminOrStationMaster } = require('../middlewares/authMiddleware
 router.post('/', protect, bookingController.createBooking);
 router.get('/my', protect, bookingController.getUserBookings);
 router.get('/', protect, adminOrStationMaster, bookingController.getAllBookings);
+router.get('/fare/calculate', bookingController.calculateFare)
+
 
 module.exports = router; 

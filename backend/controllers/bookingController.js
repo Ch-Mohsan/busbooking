@@ -59,3 +59,20 @@ exports.getAllBookings = async (req, res) => {
     res.status(500).json({ message: 'Server error', error: err.message });
   }
 }; 
+exports.calculateFare = async (req, res) => {
+  try {
+    const { fromStation, toStation, travelType } = req.query;
+    
+    // Basic validation
+    if (!fromStation || !toStation || !travelType) {
+      return res.status(400).json({ message: 'Missing required query parameters' });
+    }
+
+    const fare = travelType === 'business' ? 5500 : 4000;
+
+    return res.json({ fare });
+  } catch (err) {
+    console.error('Error calculating fare:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+}

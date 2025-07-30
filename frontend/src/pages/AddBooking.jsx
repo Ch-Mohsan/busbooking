@@ -7,7 +7,22 @@ function AddBooking() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const { currentUser } = useUser()
-  const { stations, getAvailableSeats, createBooking, calculateFare, fetchUserBookings } = useBooking()
+  const bookingContext = useBooking()
+  
+  // Add error handling for missing context
+  if (!bookingContext) {
+    return (
+      <div className="min-h-screen bg-[#f8fafc] py-8">
+        <div className="max-w-4xl mx-auto px-4">
+          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+            <strong>Error:</strong> Booking context is not available. Please make sure BookingProvider is properly configured.
+          </div>
+        </div>
+      </div>
+    )
+  }
+  
+  const { stations, getAvailableSeats, createBooking, calculateFare, fetchUserBookings } = bookingContext
   
   const [formData, setFormData] = useState({
     travelType: 'economy',
@@ -53,10 +68,19 @@ function AddBooking() {
   ]
 
   useEffect(() => {
-    if (formData.fromStation && formData.toStation && formData.date && formData.time) {
-      const seats = getAvailableSeats(formData.fromStation, formData.toStation, formData.date, formData.time)
-      setAvailableSeats(seats)
+    const loadSeats = async () => {
+      if (formData.fromStation && formData.toStation && formData.date && formData.time && getAvailableSeats) {
+        try {
+          const seats = await getAvailableSeats(formData.fromStation, formData.toStation, formData.date, formData.time)
+          setAvailableSeats(seats || [])
+        } catch (err) {
+          console.error('Error loading seats:', err)
+          setAvailableSeats([])
+        }
+      }
     }
+    
+    loadSeats()
   }, [formData.fromStation, formData.toStation, formData.date, formData.time, getAvailableSeats])
 
   const handleFormChange = (e) => {
@@ -89,6 +113,10 @@ function AddBooking() {
         setError('Origin and destination cannot be the same')
         return
       }
+      if (!createBooking) {
+        setError('Booking service is not available')
+        return
+      }
       const bookingData = {
         ...formData,
         seats: selectedSeats.map(seatNumber => ({ number: seatNumber })),
@@ -97,7 +125,9 @@ function AddBooking() {
       }
       const newBooking = await createBooking(bookingData);
       setSuccess(`Booking confirmed! Booking ID: ${newBooking._id || newBooking.id}`);
-      await fetchUserBookings();
+      if (fetchUserBookings) {
+        await fetchUserBookings();
+      }
       setTimeout(() => { navigate('/showbooking'); }, 2000);
     } catch (err) {
       setError(err.message || 'Booking failed. Please try again.')
@@ -106,7 +136,29 @@ function AddBooking() {
     }
   }
 
-  const totalAmount = selectedSeats.length * calculateFare(formData.fromStation, formData.toStation, formData.travelType)
+  // Add fallback for calculateFare function
+  const [farePerSeat, setFarePerSeat] = useState(0)
+  
+  // Calculate fare when form data changes
+  useEffect(() => {
+    const calculateFormFare = async () => {
+      if (formData.fromStation && formData.toStation && formData.travelType && calculateFare) {
+        try {
+          const fare = await calculateFare(formData.fromStation, formData.toStation, formData.travelType)
+          setFarePerSeat(fare)
+        } catch (err) {
+          console.error('Error calculating fare:', err)
+          // Fallback calculation
+          const baseFare = formData.travelType === 'business' ? 2000 : 1500
+          setFarePerSeat(baseFare)
+        }
+      }
+    }
+    
+    calculateFormFare()
+  }, [formData.fromStation, formData.toStation, formData.travelType, calculateFare])
+
+  const totalAmount = selectedSeats.length * farePerSeat
 
   return (
     <div className="min-h-screen bg-[#f8fafc] py-8">
@@ -129,13 +181,13 @@ function AddBooking() {
               <div className="flex gap-4">
                 <select name="fromStation" value={formData.fromStation} onChange={handleFormChange} className="flex-1 px-3 py-2 border border-[#78B9B5] rounded text-[#065084]" required>
                   <option value="">From</option>
-                  {stations.map(station => (
+                  {(stations || []).map(station => (
                     <option key={station.id} value={station.stationId}>{station.city}</option>
                   ))}
                 </select>
                 <select name="toStation" value={formData.toStation} onChange={handleFormChange} className="flex-1 px-3 py-2 border border-[#78B9B5] rounded text-[#065084]" required>
                   <option value="">To</option>
-                  {stations.map(station => (
+                  {(stations || []).map(station => (
                     <option key={station.id} value={station.stationId}>{station.city}</option>
                   ))}
                 </select>

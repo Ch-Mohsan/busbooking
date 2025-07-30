@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react'
 import { useUser } from '../store/UserContext'
+import { useBooking } from '../store/BookingContext'
 import { fetchStations, createStation } from '../services/StationServices'
 
 function Dashboard() {
   const { currentUser, isAdmin, isStationMaster } = useUser()
+  const { refreshStations } = useBooking() // Get refreshStations from BookingContext
 
   const [stations, setStations] = useState([])
   const [bookings, setBookings] = useState([]) // You may want to fetch bookings as well
@@ -57,7 +59,12 @@ function Dashboard() {
       setSuccess('Station added successfully!')
       setNewStation({ city: '', stationName: '', stationId: '' })
       setShowAddStation(false)
+      
+      // Refresh both local stations and BookingContext stations
       await loadStations()
+      if (refreshStations) {
+        await refreshStations()
+      }
     } catch (err) {
       setError(err.message || 'Failed to add station. Please try again.')
     } finally {
@@ -68,7 +75,7 @@ function Dashboard() {
   // Calculate statistics
   const totalBookings = bookings.length
   const confirmedBookings = bookings.filter(b => b.status === 'confirmed').length
-  const totalRevenue = bookings.reduce((sum, b) => sum + b.totalAmount, 0)
+  const totalRevenue = bookings.reduce((sum, b) => sum + (b.totalAmount || 0), 0)
   const totalStations = stations.length
 
   // Recent bookings (last 5)
@@ -324,7 +331,7 @@ function Dashboard() {
             )}
 
             <div className="p-6">
-              <h4 className="text-md font-medium text-gray-900 mb-4">All Stations</h4>
+              <h4 className="text-md font-medium text-gray-900 mb-4">All Stations ({stations.length})</h4>
               <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-200">
                   <thead className="bg-gray-50">
@@ -336,7 +343,7 @@ function Dashboard() {
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
                     {stations.map((station) => (
-                      <tr key={station.id}>
+                      <tr key={station.id || station._id}>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{station.stationId}</td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{station.city}</td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{station.stationName}</td>

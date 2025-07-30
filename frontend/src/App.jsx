@@ -1,4 +1,3 @@
-
 import React from 'react'
 import {Routes, Route, useLocation} from 'react-router-dom'
 import Layout from './components/Layout'
@@ -6,8 +5,9 @@ import Home from './pages/Home'
 import Dashboard from './pages/Dashboard'
 import SignUp from './pages/SignUp'
 import {UserProvider} from './store/UserContext'
+import {BookingProvider} from './store/BookingContext'
 import Login from './pages/Login'
-import AddBooking from './pages/Addbooking'
+import AddBooking from './pages/AddBooking'
 import ShowBooking from './pages/Showbooking'
 
 function App() {
@@ -18,21 +18,23 @@ function App() {
   return (
     <div>
       <UserProvider>
-        {hideLayout ? (
-          <Routes>
-            <Route path='/login' element={<Login />} />
-            <Route path='/signup' element={<SignUp />} />
-          </Routes>
-        ) : (
-          <Layout>
+        <BookingProvider>
+          {hideLayout ? (
             <Routes>
-              <Route path="/" element={<Home />} />
-              <Route path="/addbookng" element={<AddBooking />} />
-              <Route path="/showbookng" element={<ShowBooking />} />
-              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path='/login' element={<Login />} />
+              <Route path='/signup' element={<SignUp />} />
             </Routes>
-          </Layout>
-        )}
+          ) : (
+            <Layout>
+              <Routes>
+                <Route path="/" element={<Home />} />
+                <Route path="/addbooking" element={<AddBooking />} />
+                <Route path="/showbooking" element={<ShowBooking />} />
+                <Route path="/dashboard" element={<Dashboard />} />
+              </Routes>
+            </Layout>
+          )}
+        </BookingProvider>
       </UserProvider>
     </div>
   )
