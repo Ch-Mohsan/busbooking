@@ -9,6 +9,7 @@ import {BookingProvider} from './store/BookingContext'
 import Login from './pages/Login'
 import AddBooking from './pages/AddBooking'
 import ShowBooking from './pages/Showbooking'
+import AllBookings from './pages/AllBookings'
 
 function App() {
   const location = useLocation();
@@ -31,6 +32,7 @@ function App() {
                 <Route path="/addbooking" element={<AddBooking />} />
                 <Route path="/showbooking" element={<ShowBooking />} />
                 <Route path="/dashboard" element={<Dashboard />} />
+                <Route path='all-bookings' element={<AllBookings/>}/>
               </Routes>
             </Layout>
           )}
