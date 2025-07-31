@@ -3,10 +3,11 @@ import { useBooking } from '../store/BookingContext'
 import { useUser } from '../store/UserContext'
 
 const AllBookings = () => {
-  const { userBookings, fetchAllBookings, loading, error } = useBooking()
+  const { userBookings, fetchAllBookings, loading, error, updateBookingStatus } = useBooking()
   const { currentUser } = useUser()
   const [filter, setFilter] = useState('all')
   const [searchTerm, setSearchTerm] = useState('')
+  const [updatingBooking, setUpdatingBooking] = useState(null)
 
   useEffect(() => {
     if (currentUser && currentUser.role === 'admin') {
@@ -25,6 +26,18 @@ const AllBookings = () => {
     
     return matchesFilter && matchesSearch
   })
+
+  // Handle status update
+  const handleStatusUpdate = async (bookingId, newStatus) => {
+    try {
+      setUpdatingBooking(bookingId)
+      await updateBookingStatus(bookingId, newStatus)
+    } catch (err) {
+      console.error('Error updating status:', err)
+    } finally {
+      setUpdatingBooking(null)
+    }
+  }
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -183,6 +196,9 @@ const AllBookings = () => {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Type
                   </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Actions
+                  </th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
@@ -231,6 +247,46 @@ const AllBookings = () => {
                       }`}>
                         {booking.travelType}
                       </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                      <div className="flex space-x-2">
+                        {booking.status === 'pending' && (
+                          <>
+                            <button
+                              onClick={() => handleStatusUpdate(booking._id, 'confirmed')}
+                              disabled={updatingBooking === booking._id}
+                              className="text-green-600 hover:text-green-900 disabled:opacity-50"
+                            >
+                              {updatingBooking === booking._id ? 'Updating...' : 'Confirm'}
+                            </button>
+                            <button
+                              onClick={() => handleStatusUpdate(booking._id, 'cancelled')}
+                              disabled={updatingBooking === booking._id}
+                              className="text-red-600 hover:text-red-900 disabled:opacity-50"
+                            >
+                              {updatingBooking === booking._id ? 'Updating...' : 'Cancel'}
+                            </button>
+                          </>
+                        )}
+                        {booking.status === 'confirmed' && (
+                          <button
+                            onClick={() => handleStatusUpdate(booking._id, 'cancelled')}
+                            disabled={updatingBooking === booking._id}
+                            className="text-red-600 hover:text-red-900 disabled:opacity-50"
+                          >
+                            {updatingBooking === booking._id ? 'Updating...' : 'Cancel'}
+                          </button>
+                        )}
+                        {booking.status === 'cancelled' && (
+                          <button
+                            onClick={() => handleStatusUpdate(booking._id, 'confirmed')}
+                            disabled={updatingBooking === booking._id}
+                            className="text-green-600 hover:text-green-900 disabled:opacity-50"
+                          >
+                            {updatingBooking === booking._id ? 'Updating...' : 'Reconfirm'}
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}

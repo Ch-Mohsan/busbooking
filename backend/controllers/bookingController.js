@@ -3,6 +3,7 @@ const Booking = require('../models/Booking');
 exports.createBooking = async (req, res) => {
   try {
     const { travelType, fromStation, toStation, date, time, seats } = req.body;
+
     const user = req.user;
     if (!user) return res.status(401).json({ message: 'Unauthorized' });
 
@@ -33,7 +34,6 @@ exports.createBooking = async (req, res) => {
       time,
       seats,
       totalAmount,
-      status: 'confirmed'
     });
 
     res.status(201).json(booking);
@@ -103,3 +103,31 @@ exports.getAvailableSeats = async (req, res) => {
     res.status(500).json({ message: 'Server error', error: err.message });
   }
 };
+
+exports.updtateStatus = async(req,res)=>{
+  try {
+    const { bookingId, status } = req.body;
+
+    if (!bookingId || !status) {
+      return res.status(400).json({ message: 'Booking ID and status are required' });
+    }
+
+    const validStatuses = ['confirmed', 'cancelled', 'pending'];
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({ message: 'Invalid status' });
+    }
+
+    const booking = await Booking.findByIdAndUpdate(
+      bookingId,
+      { status },
+      { new: true }
+    );
+    if (!booking) {
+      return res.status(404).json({ message: 'Booking not found' });
+    }
+    res.json(booking);
+  } catch (err) {
+    console.error('Error updating booking status:', err);
+    res.status(500).json({ message: 'Server error', error: err.message });  
+  }
+}

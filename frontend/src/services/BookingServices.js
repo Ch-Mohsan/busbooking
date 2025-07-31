@@ -93,10 +93,10 @@ export const getBookingById = async (bookingId, token) => {
 // Update booking status (admin/station master)
 export const updateBookingStatus = async (bookingId, status, token) => {
   try {
-    const response = await fetch(`${API_BASE_URL}/bookings/${bookingId}/status`, {
+    const response = await fetch(`${API_BASE_URL}/bookings/status`, {
       method: 'PUT',
       headers: getAuthHeaders(token),
-      body: JSON.stringify({ status })
+      body: JSON.stringify({ status,bookingId })
     });
     
     return await handleResponse(response);

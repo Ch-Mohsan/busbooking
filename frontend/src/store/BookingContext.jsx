@@ -40,61 +40,60 @@ export const BookingProvider = ({ children }) => {
   }
 
   // Get available seats for a route
-// Get available seats for a route
-const getAvailableSeats = async (fromStation, toStation, date, time) => {
-  try {
-    if (!currentUser?.token) {
-      console.warn('No user token found, returning mock data for available seats')
-      // Return mock data if no user token
-      const totalSeats = 40
-      const seats = []
-      for (let i = 1; i <= totalSeats; i++) {
-        seats.push({
-          number: i,
-          available: Math.random() > 0.3 // 70% chance of being available
-        })
+  const getAvailableSeats = async (fromStation, toStation, date, time) => {
+    try {
+      if (!currentUser?.token) {
+        console.warn('No user token found, returning mock data for available seats')
+        // Return mock data if no user token
+        const totalSeats = 40
+        const seats = []
+        for (let i = 1; i <= totalSeats; i++) {
+          seats.push({
+            number: i,
+            available: Math.random() > 0.3 // 70% chance of being available
+          })
+        }
+        return seats
       }
-      return seats
-    }
 
-    const seatsData = await BookingServices.getAvailableSeats(
-      fromStation, 
-      toStation, 
-      date, 
-      time, 
-      currentUser.token
-    )
-    
-    // Handle different response formats from backend
-    if (seatsData.availableSeats) {
-      // Backend returns { availableSeats: [1, 2, 3, ...] }
+      const seatsData = await BookingServices.getAvailableSeats(
+        fromStation, 
+        toStation, 
+        date, 
+        time, 
+        currentUser.token
+      )
+      
+      // Handle different response formats from backend
+      if (seatsData.availableSeats) {
+        // Backend returns { availableSeats: [1, 2, 3, ...] }
+        const totalSeats = 40
+        const seats = []
+        for (let i = 1; i <= totalSeats; i++) {
+          seats.push({
+            number: i,
+            available: seatsData.availableSeats.includes(i)
+          })
+        }
+        return seats
+      }
+      
+      // Return as is if already in expected format
+      return seatsData.seats || seatsData
+    } catch (err) {
+      console.error('Error getting available seats:', err)
+      // Return mock data on error
       const totalSeats = 40
       const seats = []
       for (let i = 1; i <= totalSeats; i++) {
         seats.push({
           number: i,
-          available: seatsData.availableSeats.includes(i)
+          available: Math.random() > 0.3
         })
       }
       return seats
     }
-    
-    // Return as is if already in expected format
-    return seatsData.seats || seatsData
-  } catch (err) {
-    console.error('Error getting available seats:', err)
-    // Return mock data on error
-    const totalSeats = 40
-    const seats = []
-    for (let i = 1; i <= totalSeats; i++) {
-      seats.push({
-        number: i,
-        available: Math.random() > 0.3
-      })
-    }
-    return seats
   }
-}
 
   // Calculate fare for a route
   const calculateFare = async (fromStation, toStation, travelType) => {
@@ -138,18 +137,51 @@ const getAvailableSeats = async (fromStation, toStation, date, time) => {
       const bookingPayload = {
         ...bookingData,
         totalAmount,
-        status: 'confirmed',
+        status: currentUser.role === 'admin' ? 'confirmed' : 'pending', // Admin bookings auto-confirmed
         bookingDate: new Date().toISOString()
       }
 
       const newBooking = await BookingServices.createBooking(bookingPayload, currentUser.token)
       
       // Refresh user bookings
-      await fetchUserBookings()
+      if (currentUser.role === 'admin') {
+        await fetchAllBookings()
+      } else {
+        await fetchUserBookings()
+      }
       
       return newBooking
     } catch (err) {
       console.error('Error creating booking:', err)
+      setError(err.message)
+      throw err
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Update booking status (admin only)
+  const updateBookingStatus = async (bookingId, newStatus) => {
+    try {
+      if (!currentUser?.token) {
+        throw new Error('User must be logged in to update booking status')
+      }
+
+      if (currentUser.role !== 'admin') {
+        throw new Error('Only admin can update booking status')
+      }
+
+      setLoading(true)
+      setError(null)
+
+      await BookingServices.updateBookingStatus(bookingId, newStatus, currentUser.token)
+      
+      // Refresh bookings list
+      await fetchAllBookings()
+      
+      return true
+    } catch (err) {
+      console.error('Error updating booking status:', err)
       setError(err.message)
       throw err
     } finally {
@@ -185,10 +217,16 @@ const getAvailableSeats = async (fromStation, toStation, date, time) => {
       }
 
       setLoading(true)
-      await BookingServices.cancelBooking(bookingId, currentUser.token)
       
-      // Refresh bookings
-      await fetchUserBookings()
+      if (currentUser.role === 'admin') {
+        // Admin can update status to cancelled
+        await updateBookingStatus(bookingId, 'cancelled')
+      } else {
+        // Regular user cancellation
+        await BookingServices.cancelBooking(bookingId, currentUser.token)
+        await fetchUserBookings()
+      }
+      
     } catch (err) {
       console.error('Error canceling booking:', err)
       setError(err.message)
@@ -212,24 +250,24 @@ const getAvailableSeats = async (fromStation, toStation, date, time) => {
       throw err
     }
   }
+
   const fetchAllBookings = async () => {
-  try {
-    if (!currentUser?.token) {
-      setUserBookings([])
-      return
+    try {
+      if (!currentUser?.token) {
+        setUserBookings([])
+        return
+      }
+
+      setLoading(true)
+      const bookingsData = await BookingServices.getAllBookings(currentUser.token)
+      setUserBookings(bookingsData.bookings || bookingsData)
+    } catch (err) {
+      console.error('Error fetching all bookings:', err)
+      setError(err.message)
+    } finally {
+      setLoading(false)
     }
-
-    setLoading(true)
-    const bookingsData = await BookingServices.getAllBookings(currentUser.token)
-    setUserBookings(bookingsData.bookings || bookingsData)
-  } catch (err) {
-    console.error('Error fetching all bookings:', err)
-    setError(err.message)
-  } finally {
-    setLoading(false)
   }
-}
-
 
   const contextValue = {
     // Data
@@ -245,8 +283,9 @@ const getAvailableSeats = async (fromStation, toStation, date, time) => {
     fetchUserBookings,
     cancelBooking,
     getBookingById,
-    loadStations, // This allows components to refresh stations
-    fetchAllBookings, // Add this line
+    loadStations,
+    fetchAllBookings,
+    updateBookingStatus, // Add this new function
     
     // Helper function to refresh stations after adding new ones
     refreshStations: loadStations
