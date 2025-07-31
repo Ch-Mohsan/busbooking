@@ -144,17 +144,7 @@ function Home() {
         </div>
       </div>
 
-      {/* Debug Info - Remove this in production */}
-      {process.env.NODE_ENV === 'development' && (
-        <div className="max-w-5xl mx-auto px-4 py-4">
-          <details className="bg-gray-100 p-4 rounded">
-            <summary className="cursor-pointer font-medium">Debug: Stations Data</summary>
-            <pre className="mt-2 text-xs overflow-auto">
-              {JSON.stringify(stations, null, 2)}
-            </pre>
-          </details>
-        </div>
-      )}
+      
     </div>
   )
 }
