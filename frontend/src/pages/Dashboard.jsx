@@ -5,11 +5,11 @@ import { fetchStations, createStation } from '../services/StationServices'
 
 function Dashboard() {
   const { currentUser, isAdmin, isStationMaster } = useUser()
-  const { refreshStations } = useBooking() // Get refreshStations from BookingContext
+  const { refreshStations, fetchAllBookings, userBookings } = useBooking()
 
   const [stations, setStations] = useState([])
-  const [bookings, setBookings] = useState([]) // You may want to fetch bookings as well
-  const [showAddStation, setShowAddStation] = useState(false)
+  const [allBookings, setAllBookings] = useState([])
+  const [showAddStationModal, setShowAddStationModal] = useState(false)
   const [newStation, setNewStation] = useState({
     city: '',
     stationName: '',
@@ -19,52 +19,91 @@ function Dashboard() {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
 
-  // Fetch stations on mount
+  // Fetch data on mount
   useEffect(() => {
-    loadStations()
+    loadData()
   }, [])
 
-  const loadStations = async () => {
+  const loadData = async () => {
     setLoading(true)
-    setError('')
     try {
-      const data = await fetchStations()
-      setStations(data)
+      // Load stations
+      await loadStations()
+      
+      // Load bookings if user has admin or station master privileges
+      if (isAdmin() || isStationMaster()) {
+        await loadAllBookings()
+      }
     } catch (err) {
-      setError(err.message)
+      setError('Failed to load dashboard data')
     } finally {
       setLoading(false)
     }
   }
 
+  const loadStations = async () => {
+    try {
+      const data = await fetchStations()
+      setStations(data)
+    } catch (err) {
+      console.error('Error loading stations:', err)
+    }
+  }
+
+  const loadAllBookings = async () => {
+    try {
+      if (fetchAllBookings) {
+        await fetchAllBookings()
+        setAllBookings(userBookings || [])
+      }
+    } catch (err) {
+      console.error('Error loading bookings:', err)
+    }
+  }
+
+  // Update allBookings when userBookings changes
+  useEffect(() => {
+    if (userBookings) {
+      setAllBookings(userBookings)
+    }
+  }, [userBookings])
+
   const handleAddStation = async (e) => {
-    e.preventDefault()
+    if (e && e.preventDefault) {
+      e.preventDefault()
+    }
     setLoading(true)
     setError('')
     setSuccess('')
+    
     try {
       if (!newStation.city || !newStation.stationName || !newStation.stationId) {
         setError('Please fill in all fields')
         return
       }
-      // Check if station ID already exists in the fetched list
+      
+      // Check if station ID already exists
       const existingStation = stations.find(s => s.stationId === newStation.stationId)
       if (existingStation) {
         setError('Station ID already exists')
         return
       }
-      // Get token from localStorage
+      
       const token = localStorage.getItem('busBookingToken')
       await createStation(newStation, token)
+      
       setSuccess('Station added successfully!')
       setNewStation({ city: '', stationName: '', stationId: '' })
-      setShowAddStation(false)
+      setShowAddStationModal(false)
       
-      // Refresh both local stations and BookingContext stations
+      // Refresh stations
       await loadStations()
       if (refreshStations) {
         await refreshStations()
       }
+      
+      // Clear success message after 3 seconds
+      setTimeout(() => setSuccess(''), 3000)
     } catch (err) {
       setError(err.message || 'Failed to add station. Please try again.')
     } finally {
@@ -72,17 +111,30 @@ function Dashboard() {
     }
   }
 
+  const closeModal = () => {
+    setShowAddStationModal(false)
+    setNewStation({ city: '', stationName: '', stationId: '' })
+    setError('')
+    setSuccess('')
+  }
+
   // Calculate statistics
-  const totalBookings = bookings.length
-  const confirmedBookings = bookings.filter(b => b.status === 'confirmed').length
-  const totalRevenue = bookings.reduce((sum, b) => sum + (b.totalAmount || 0), 0)
+  const totalBookings = allBookings.length
+  const confirmedBookings = allBookings.filter(b => b.status === 'confirmed').length
+  const pendingBookings = allBookings.filter(b => b.status === 'pending').length
+  const cancelledBookings = allBookings.filter(b => b.status === 'cancelled').length
+  const totalRevenue = allBookings
+    .filter(b => b.status === 'confirmed')
+    .reduce((sum, b) => sum + (b.totalAmount || 0), 0)
   const totalStations = stations.length
 
   // Recent bookings (last 5)
-  const recentBookings = bookings.slice(0, 5)
+  const recentBookings = allBookings
+    .sort((a, b) => new Date(b.bookingDate || b.createdAt) - new Date(a.bookingDate || a.createdAt))
+    .slice(0, 5)
 
   // Popular routes
-  const routeStats = bookings.reduce((acc, booking) => {
+  const routeStats = allBookings.reduce((acc, booking) => {
     const route = `${booking.fromStation} → ${booking.toStation}`
     acc[route] = (acc[route] || 0) + 1
     return acc
@@ -132,6 +184,13 @@ function Dashboard() {
             Welcome back, {currentUser?.username}! Here's an overview of your system.
           </p>
         </div>
+
+        {/* Success Message */}
+        {success && (
+          <div className="mb-6 bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative">
+            <span className="block sm:inline">{success}</span>
+          </div>
+        )}
 
         {/* Statistics Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
@@ -192,6 +251,83 @@ function Dashboard() {
           </div>
         </div>
 
+        {/* Additional Statistics Row */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <div className="flex items-center">
+              <div className="h-12 w-12 bg-orange-100 rounded-lg flex items-center justify-center">
+                <svg className="h-6 w-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Pending Bookings</p>
+                <p className="text-2xl font-bold text-gray-900">{pendingBookings}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <div className="flex items-center">
+              <div className="h-12 w-12 bg-red-100 rounded-lg flex items-center justify-center">
+                <svg className="h-6 w-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Cancelled Bookings</p>
+                <p className="text-2xl font-bold text-gray-900">{cancelledBookings}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <div className="flex items-center">
+              <div className="h-12 w-12 bg-indigo-100 rounded-lg flex items-center justify-center">
+                <svg className="h-6 w-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                </svg>
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Success Rate</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {totalBookings > 0 ? Math.round((confirmedBookings / totalBookings) * 100) : 0}%
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Quick Actions */}
+        {isAdmin() && (
+          <div className="mb-8">
+            <div className="bg-white rounded-lg shadow-md p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
+              <div className="flex flex-wrap gap-4">
+                <button
+                  onClick={() => setShowAddStationModal(true)}
+                  className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors flex items-center"
+                >
+                  <svg className="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                  </svg>
+                  Add New Station
+                </button>
+                <button
+                  onClick={loadData}
+                  disabled={loading}
+                  className="bg-gray-600 text-white px-6 py-3 rounded-lg hover:bg-gray-700 transition-colors flex items-center disabled:opacity-50"
+                >
+                  <svg className="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                  {loading ? 'Refreshing...' : 'Refresh Data'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Recent Bookings */}
           <div className="bg-white rounded-lg shadow-md">
@@ -204,13 +340,16 @@ function Dashboard() {
               ) : (
                 <div className="space-y-4">
                   {recentBookings.map((booking) => (
-                    <div key={booking.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                    <div key={booking.id || booking._id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                       <div>
                         <p className="text-sm font-medium text-gray-900">
                           {booking.fromStation} → {booking.toStation}
                         </p>
                         <p className="text-xs text-gray-500">
-                          {booking.username} • {formatDate(booking.date)}
+                          {booking.username || booking.user?.username} • {formatDate(booking.date || booking.bookingDate)}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          Seats: {Array.isArray(booking.seats) ? booking.seats.join(', ') : booking.seats}
                         </p>
                       </div>
                       <div className="text-right">
@@ -220,7 +359,9 @@ function Dashboard() {
                         <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
                           booking.status === 'confirmed' 
                             ? 'bg-green-100 text-green-800'
-                            : 'bg-yellow-100 text-yellow-800'
+                            : booking.status === 'pending'
+                            ? 'bg-yellow-100 text-yellow-800'
+                            : 'bg-red-100 text-red-800'
                         }`}>
                           {booking.status}
                         </span>
@@ -257,81 +398,13 @@ function Dashboard() {
           </div>
         </div>
 
-        {/* Station Management (Admin Only) */}
+        {/* Station Management Table */}
         {isAdmin() && (
           <div className="mt-8 bg-white rounded-lg shadow-md">
             <div className="p-6 border-b border-gray-200">
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-gray-900">Station Management</h3>
-                <button
-                  onClick={() => setShowAddStation(!showAddStation)}
-                  className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors"
-                >
-                  {showAddStation ? 'Cancel' : 'Add Station'}
-                </button>
-              </div>
+              <h3 className="text-lg font-semibold text-gray-900">All Stations ({stations.length})</h3>
             </div>
-
-            {showAddStation && (
-              <div className="p-6 border-b border-gray-200">
-                <form onSubmit={handleAddStation} className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">City</label>
-                      <input
-                        type="text"
-                        value={newStation.city}
-                        onChange={(e) => setNewStation({...newStation, city: e.target.value})}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="Enter city name"
-                        required
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Station Name</label>
-                      <input
-                        type="text"
-                        value={newStation.stationName}
-                        onChange={(e) => setNewStation({...newStation, stationName: e.target.value})}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="Enter station name"
-                        required
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Station ID</label>
-                      <input
-                        type="text"
-                        value={newStation.stationId}
-                        onChange={(e) => setNewStation({...newStation, stationId: e.target.value})}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="Enter station ID"
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  {error && (
-                    <div className="text-red-600 text-sm">{error}</div>
-                  )}
-
-                  {success && (
-                    <div className="text-green-600 text-sm">{success}</div>
-                  )}
-
-                  <button
-                    type="submit"
-                    disabled={loading}
-                    className="bg-green-600 text-white px-6 py-2 rounded-md hover:bg-green-700 transition-colors disabled:opacity-50"
-                  >
-                    {loading ? 'Adding...' : 'Add Station'}
-                  </button>
-                </form>
-              </div>
-            )}
-
             <div className="p-6">
-              <h4 className="text-md font-medium text-gray-900 mb-4">All Stations ({stations.length})</h4>
               <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-200">
                   <thead className="bg-gray-50">
@@ -351,6 +424,82 @@ function Dashboard() {
                     ))}
                   </tbody>
                 </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Add Station Modal */}
+        {showAddStationModal && (
+          <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+            <div className="relative top-20 mx-auto p-5 border w-full max-w-md shadow-lg rounded-md bg-white">
+              <div className="mt-3">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-medium text-gray-900">Add New Station</h3>
+                  <button
+                    onClick={closeModal}
+                    className="text-gray-400 hover:text-gray-600"
+                  >
+                    <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">City</label>
+                    <input
+                      type="text"
+                      value={newStation.city}
+                      onChange={(e) => setNewStation({...newStation, city: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="Enter city name"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Station Name</label>
+                    <input
+                      type="text"
+                      value={newStation.stationName}
+                      onChange={(e) => setNewStation({...newStation, stationName: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="Enter station name"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Station ID</label>
+                    <input
+                      type="text"
+                      value={newStation.stationId}
+                      onChange={(e) => setNewStation({...newStation, stationId: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="Enter station ID"
+                    />
+                  </div>
+
+                  {error && (
+                    <div className="text-red-600 text-sm">{error}</div>
+                  )}
+
+                  <div className="flex justify-end space-x-3 pt-4">
+                    <button
+                      onClick={closeModal}
+                      className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 border border-gray-300 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleAddStation}
+                      disabled={loading}
+                      className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+                    >
+                      {loading ? 'Adding...' : 'Add Station'}
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
