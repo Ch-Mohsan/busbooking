@@ -41,13 +41,19 @@ function SignUp() {
         setError('Password must be at least 6 characters');
         return;
       }
-      await signup({
+      const res= await signup({
         username: formData.username,
         email: formData.email,
         password: formData.password,
         role: formData.role,
       });
-      navigate('/dashboard');
+      if(res.ok){
+
+  
+        navigate('/login');  }
+        else{
+        setError('Registration failed. Please try again.');
+        }
     } catch (err) {
       setError('Registration failed. Please try again.');
     } finally {

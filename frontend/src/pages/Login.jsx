@@ -27,16 +27,32 @@ function Login() {
 
     try {
       if (formData.email && formData.password) {
-        await login({
+        const result = await login({
           email: formData.email,
           password: formData.password,
         });
-        navigate('/dashboard');
+        
+        // Check if login was successful and redirect based on user role
+        if (result && result.user) {
+          const userRole = result.user.role;
+          
+          if (userRole === 'admin') {
+            navigate('/dashboard');
+          }
+          else if (userRole === 'station_master') {
+            navigate('/dashboard');
+          }
+          else {
+            navigate('/');
+          }
+        } else {
+          setError('Invalid email or password');
+        }
       } else {
         setError('Please fill in all fields');
       }
     } catch (err) {
-      setError('Login failed. Please try again.');
+      setError(err.message || 'Login failed. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -48,7 +64,7 @@ function Login() {
         <div className="text-center mb-6">
           <div className="mx-auto h-12 w-12 bg-[#0F828C] rounded-full flex items-center justify-center">
             <svg className="h-6 w-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 002 2z" />
             </svg>
           </div>
           <h2 className="mt-4 text-2xl font-bold text-[#065084]">Sign In</h2>
@@ -99,12 +115,6 @@ function Login() {
             </Link>
           </p>
         </div>
-        {/* <div className="mt-6 p-3 bg-[#f8fafc] rounded text-xs text-[#065084]">
-          <div className="mb-1 font-semibold">Demo Credentials:</div>
-          <div>Admin: <b>admin@demo.com</b> / password</div>
-          <div>Station Master: <b>station@demo.com</b> / password</div>
-          <div>User: <b>user@demo.com</b> / password</div>
-        </div> */}
       </div>
     </div>
   )
