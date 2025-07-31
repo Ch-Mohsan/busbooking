@@ -2,11 +2,18 @@ import React from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { useUser } from '../store/UserContext'
 
-function Sidebar() {
+function Sidebar({ onItemClick }) {
   const location = useLocation()
   const { currentUser, isAdmin, isStationMaster } = useUser()
 
   const isActive = (path) => location.pathname === path
+
+  const handleItemClick = () => {
+    // Auto-hide sidebar on mobile when item is clicked
+    if (onItemClick) {
+      onItemClick()
+    }
+  }
 
   const navigationItems = [
     { name: 'Home', path: '/', icon: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6' },
@@ -32,40 +39,48 @@ function Sidebar() {
   ]
 
   return (
-    <div className="fixed left-0 top-14 h-full w-56 bg-[#f8fafc] border-r border-[#78B9B5] z-40">
+    <div className="h-full w-56 bg-white border-r border-gray-200 shadow-xl lg:shadow-none lg:bg-[#f8fafc] lg:border-[#78B9B5]">
       <div className="flex flex-col h-full">
         {/* User Info */}
         {currentUser && (
-          <div className="p-4 border-b border-[#78B9B5]">
+          <div className="p-4 border-b border-gray-200 lg:border-[#78B9B5] bg-white lg:bg-white">
             <div className="flex items-center space-x-3">
               <div className="h-10 w-10 bg-[#320A6B] rounded-full flex items-center justify-center">
                 <span className="text-sm font-medium text-white">
-                  {currentUser.username.charAt(0).toUpperCase()}
+                  {(currentUser.name || currentUser.username)?.charAt(0).toUpperCase() || 'U'}
                 </span>
               </div>
-              <div>
-                <p className="text-sm font-medium text-[#065084]">{currentUser.username}</p>
-                <p className="text-xs text-[#0F828C]">{currentUser.email}</p>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-[#065084] truncate">
+                  {currentUser.name || currentUser.username}
+                </p>
+                <p className="text-xs text-[#0F828C] truncate">{currentUser.email}</p>
+                <span className="inline-block px-2 py-0.5 text-xs font-medium bg-[#78B9B5] text-[#320A6B] rounded-full mt-1">
+                  {currentUser.role?.replace('_', ' ').toUpperCase() || 'USER'}
+                </span>
               </div>
             </div>
           </div>
         )}
 
         {/* Navigation */}
-        <nav className="flex-1 px-4 py-6 space-y-1">
+        <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto">
           {allItems.map((item) => (
             <Link
               key={item.name}
               to={item.path}
-              className={`flex items-center space-x-3 px-3 py-2 rounded text-sm font-medium transition-colors ${
+              onClick={handleItemClick}
+              className={`flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 group ${
                 isActive(item.path)
-                  ? 'bg-[#78B9B5] text-[#320A6B] border-r-4 border-[#0F828C]'
-                  : 'text-[#065084] hover:bg-[#e6f2f1] hover:text-[#0F828C]'
+                  ? 'bg-[#0F828C] text-white shadow-md transform scale-105'
+                  : 'text-[#065084] hover:bg-[#e6f2f1] hover:text-[#0F828C] hover:transform hover:translate-x-1'
               }`}
             >
               <svg
-                className={`h-5 w-5 ${
-                  isActive(item.path) ? 'text-[#320A6B]' : 'text-[#0F828C]'
+                className={`h-5 w-5 transition-colors ${
+                  isActive(item.path) 
+                    ? 'text-white' 
+                    : 'text-[#0F828C] group-hover:text-[#065084]'
                 }`}
                 fill="none"
                 stroke="currentColor"
@@ -73,15 +88,19 @@ function Sidebar() {
               >
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={item.icon} />
               </svg>
-              <span>{item.name}</span>
+              <span className="truncate">{item.name}</span>
+              {isActive(item.path) && (
+                <div className="ml-auto w-2 h-2 bg-white rounded-full"></div>
+              )}
             </Link>
           ))}
         </nav>
 
         {/* Footer */}
-        <div className="p-4 border-t border-[#78B9B5]">
+        <div className="p-4 border-t border-gray-200 lg:border-[#78B9B5] bg-white lg:bg-white">
           <div className="text-xs text-[#0F828C] text-center">
-            Bus Booking System<br />v1.0.0
+            <div className="font-semibold text-[#065084]">Bus Booking System</div>
+            <div className="mt-1">Version 1.0.0</div>
           </div>
         </div>
       </div>
