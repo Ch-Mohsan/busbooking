@@ -64,7 +64,7 @@ function Navbar({ onMenuToggle, isMobileMenuOpen }) {
               </svg>
             </div>
             <span className="text-lg font-bold text-[#065084] hidden sm:block">
-              Bus Booking
+              BustyRide
             </span>
           </Link>
         </div>
