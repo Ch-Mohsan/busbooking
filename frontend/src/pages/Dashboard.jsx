@@ -4,7 +4,7 @@ import { useBooking } from '../store/BookingContext'
 import { fetchStations, createStation } from '../services/StationServices'
 
 function Dashboard() {
-  const { currentUser, isAdmin, isStationMaster,getAllUsers } = useUser()
+  const { currentUser, isAdmin, isStationMaster, getAllUsers } = useUser()
   const { refreshStations, fetchAllBookings, userBookings } = useBooking()
 
   const [stations, setStations] = useState([])
@@ -19,10 +19,27 @@ function Dashboard() {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
 
+  // Get station-specific data for station masters
+  const stationId = currentUser?.assignedStation?.stationId
+  const stationName = currentUser?.assignedStation?.stationName
+
+  // Filter bookings based on user role
+  const getFilteredBookings = (bookings) => {
+    if (!bookings) return []
+    
+    if (isAdmin()) {
+      return bookings // Admin sees all bookings
+    } else if (isStationMaster() && stationId) {
+      // Station master only sees bookings from their assigned station
+      return bookings.filter(booking => booking.fromStation === stationId)
+    }
+    
+    return []
+  }
+
   // Fetch data on mount
   useEffect(() => {
     loadData()
-     
   }, [])
 
   const loadData = async () => {
@@ -55,7 +72,9 @@ function Dashboard() {
     try {
       if (fetchAllBookings) {
         await fetchAllBookings()
-        setAllBookings(userBookings || [])
+        // Filter bookings based on user role
+        const filteredBookings = getFilteredBookings(userBookings)
+        setAllBookings(filteredBookings)
       }
     } catch (err) {
       console.error('Error loading bookings:', err)
@@ -65,9 +84,10 @@ function Dashboard() {
   // Update allBookings when userBookings changes
   useEffect(() => {
     if (userBookings) {
-      setAllBookings(userBookings)
+      const filteredBookings = getFilteredBookings(userBookings)
+      setAllBookings(filteredBookings)
     }
-  }, [userBookings])
+  }, [userBookings, stationId]) // Added stationId as dependency
 
   const handleAddStation = async (e) => {
     if (e && e.preventDefault) {
@@ -119,7 +139,7 @@ function Dashboard() {
     setSuccess('')
   }
 
-  // Calculate statistics
+  // Calculate statistics (now using filtered bookings)
   const totalBookings = allBookings.length
   const confirmedBookings = allBookings.filter(b => b.status === 'confirmed').length
   const pendingBookings = allBookings.filter(b => b.status === 'pending').length
@@ -134,7 +154,7 @@ function Dashboard() {
     .sort((a, b) => new Date(b.bookingDate || b.createdAt) - new Date(a.bookingDate || a.createdAt))
     .slice(0, 5)
 
-  // Popular routes
+  // Popular routes (based on filtered bookings)
   const routeStats = allBookings.reduce((acc, booking) => {
     const route = `${booking.fromStation} → ${booking.toStation}`
     acc[route] = (acc[route] || 0) + 1
@@ -182,7 +202,10 @@ function Dashboard() {
             {isAdmin() ? 'Admin Dashboard' : 'Station Master Dashboard'}
           </h1>
           <p className="text-gray-600">
-            Welcome back, {currentUser?.username}! Here's an overview of your system.
+            Welcome back, {currentUser?.username}! 
+            {isStationMaster() && stationName && (
+              <span> Managing {stationName} ({stationId})</span>
+            )}
           </p>
         </div>
 
@@ -203,7 +226,9 @@ function Dashboard() {
                 </svg>
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Total Bookings</p>
+                <p className="text-sm font-medium text-gray-600">
+                  {isStationMaster() ? 'Station Bookings' : 'Total Bookings'}
+                </p>
                 <p className="text-2xl font-bold text-gray-900">{totalBookings}</p>
               </div>
             </div>
@@ -231,7 +256,9 @@ function Dashboard() {
                 </svg>
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Total Revenue</p>
+                <p className="text-sm font-medium text-gray-600">
+                  {isStationMaster() ? 'Station Revenue' : 'Total Revenue'}
+                </p>
                 <p className="text-2xl font-bold text-gray-900">{formatCurrency(totalRevenue)}</p>
               </div>
             </div>
@@ -299,7 +326,7 @@ function Dashboard() {
           </div>
         </div>
 
-        {/* Quick Actions */}
+        {/* Quick Actions - Only show for Admin */}
         {isAdmin() && (
           <div className="mb-8">
             <div className="bg-white rounded-lg shadow-md p-6">
@@ -314,16 +341,6 @@ function Dashboard() {
                   </svg>
                   Add New Station
                 </button>
-                {/* <button
-                  onClick={loadData}
-                  disabled={loading}
-                  className="bg-gray-600 text-white px-6 py-3 rounded-lg hover:bg-gray-700 transition-colors flex items-center disabled:opacity-50"
-                >
-                  <svg className="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                  </svg>
-                  {loading ? 'Refreshing...' : 'Refresh Data'}
-                </button> */}
               </div>
             </div>
           </div>
@@ -333,11 +350,15 @@ function Dashboard() {
           {/* Recent Bookings */}
           <div className="bg-white rounded-lg shadow-md">
             <div className="p-6 border-b border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-900">Recent Bookings</h3>
+              <h3 className="text-lg font-semibold text-gray-900">
+                {isStationMaster() ? 'Recent Station Bookings' : 'Recent Bookings'}
+              </h3>
             </div>
             <div className="p-6">
               {recentBookings.length === 0 ? (
-                <p className="text-gray-500 text-center py-4">No recent bookings</p>
+                <p className="text-gray-500 text-center py-4">
+                  {isStationMaster() ? 'No recent station bookings' : 'No recent bookings'}
+                </p>
               ) : (
                 <div className="space-y-4">
                   {recentBookings.map((booking) => (
@@ -377,7 +398,9 @@ function Dashboard() {
           {/* Popular Routes */}
           <div className="bg-white rounded-lg shadow-md">
             <div className="p-6 border-b border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-900">Popular Routes</h3>
+              <h3 className="text-lg font-semibold text-gray-900">
+                {isStationMaster() ? 'Popular Routes from Station' : 'Popular Routes'}
+              </h3>
             </div>
             <div className="p-6">
               {popularRoutes.length === 0 ? (
@@ -399,7 +422,7 @@ function Dashboard() {
           </div>
         </div>
 
-        {/* Station Management Table */}
+        {/* Station Management Table - Only show for Admin */}
         {isAdmin() && (
           <div className="mt-8 bg-white rounded-lg shadow-md">
             <div className="p-6 border-b border-gray-200">
@@ -430,8 +453,8 @@ function Dashboard() {
           </div>
         )}
 
-        {/* Add Station Modal */}
-        {showAddStationModal && (
+        {/* Add Station Modal - Only for Admin */}
+        {showAddStationModal && isAdmin() && (
           <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
             <div className="relative top-20 mx-auto p-5 border w-full max-w-md shadow-lg rounded-md bg-white">
               <div className="mt-3">
