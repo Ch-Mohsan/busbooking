@@ -33,18 +33,18 @@ function Login() {
         });
         console.log(res, 'response from login');
         if (res.token) {
-          if (res.user.role === 'station_master' && res.user.status === 'pending') {
+          if (res.user.role === 'station_master' && res.user.status === 'pending') {               
             setError('Your account is pending approval by the admin.');
           }
           else if (res.user.role === 'station_master'&& res.user.status === 'active') {
             navigate('/dashboard'); // Redirect to station master dashboard
           }
            else if (res.user.role === 'admin') {
-            navigate('/admin-dashboard'); // Redirect to admin dashboard for admins
+            navigate('/dashboard'); // Redirect to admin dashboard for admins
           } else {
-            navigate('/user-dashboard'); // Redirect to user dashboard for regular users
+            navigate('/'); // Redirect to user dashboard for regular users
           }
-          navigate('/'); // Redirect to home or dashboard after successful login
+          // navigate('/'); // Redirect to home or dashboard after successful login
         } else {
           setError('Invalid credentials. Please try again.');
         }

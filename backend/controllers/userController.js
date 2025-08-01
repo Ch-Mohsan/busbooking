@@ -36,7 +36,7 @@ exports.login = async (req, res) => {
     const token = jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, { expiresIn: '7d' });
     res.status(200).json({
       token,
-      user: { id: user._id, username: user.username, email: user.email, role: user.role }
+      user: { id: user._id, username: user.username, email: user.email, role: user.role,status:user.status  }
     });
   } catch (err) {
     res.status(500).json({ message: 'Server error', error: err.message });
@@ -52,3 +52,29 @@ exports.getProfile = async (req, res) => {
     res.status(500).json({ message: 'Server error', error: err.message });
   }
 }; 
+exports.getAllUsers=async(req,res)=>{
+  try {
+    const users = await User.find().select('-password');
+    res.json(users);
+    
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+    
+  }
+}
+exports.updateUserStatus= async (req, res) => {
+  try {
+    const { userId, status } = req.body;
+    if (!userId || !status) {
+      return res.status(400).json({ message: 'User ID and status are required' });
+    }
+    const user = await User.findByIdAndUpdate(userId, { status }, { new: true });
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    res.json({ message: 'User status updated successfully', user });
+    
+  } catch (error) {
+    
+  }
+}

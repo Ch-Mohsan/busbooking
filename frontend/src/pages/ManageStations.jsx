@@ -5,6 +5,8 @@ import { useBooking } from '../store/BookingContext'
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api'
 
 const ManageStations = () => {
+  const { getAllUsers } = useUser()
+   const [statioUsers, setStationUsers] = useState([])
   const { currentUser } = useUser()
   const { stations, loadStations } = useBooking()
   const [loading, setLoading] = useState(false)
@@ -16,10 +18,35 @@ const ManageStations = () => {
     stationName: '',
     stationId: ''
   })
+   const fetchALLUseres= async()=>{
+  try {
+    const users = await getAllUsers()
+    console.log(users, 'Fetched users from context')
+    return users
+    
+  } catch (error) {
+    console.error('Error fetching users:', error)
+    throw error
+    
+  }
+ }
+ const fillterStationsUsers= async ()=>{
+  try {
+    const users = await fetchALLUseres()
+    const filteredStations = users.filter(user => user.role === 'station_master')
+    const pendingStationUsers= filteredStations.filter(user => user.status === 'pending')
+    // console.log(pendingStationUsers, 'Filtered stations by users')
+    setStationUsers(pendingStationUsers)
+    
+  } catch (error) {
+    console.error('Error filtering stations by users:', error)
+  }
+ }
 
   useEffect(() => {
     if (currentUser && currentUser.role === 'admin') {
       loadStations()
+      fillterStationsUsers() 
     }
   }, [currentUser])
 
@@ -238,6 +265,31 @@ const ManageStations = () => {
             </table>
           </div>
         )}
+          
+      </div>
+      <div>
+        {
+          statioUsers.length > 0 && (
+            <div className="mt-8 bg-white rounded-lg shadow-md p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Pending Station Users ({statioUsers.length})</h3>
+              <ul className="space-y-4">
+                {statioUsers.map(user => (
+                  <li key={user.id || user._id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">{user.username}</p>
+                      <p className="text-xs text-gray-500">{user.email}</p>
+                    </div>
+                    <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                      user.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'
+                    }`}>
+                      {user.status}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )
+        }
       </div>
 
       {/* Modal */}
@@ -308,6 +360,7 @@ const ManageStations = () => {
                 </div>
               </form>
             </div>
+           
           </div>
         </div>
       )}

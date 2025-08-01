@@ -4,7 +4,7 @@ import { useBooking } from '../store/BookingContext'
 import { fetchStations, createStation } from '../services/StationServices'
 
 function Dashboard() {
-  const { currentUser, isAdmin, isStationMaster } = useUser()
+  const { currentUser, isAdmin, isStationMaster,getAllUsers } = useUser()
   const { refreshStations, fetchAllBookings, userBookings } = useBooking()
 
   const [stations, setStations] = useState([])
@@ -22,6 +22,7 @@ function Dashboard() {
   // Fetch data on mount
   useEffect(() => {
     loadData()
+     
   }, [])
 
   const loadData = async () => {
@@ -504,6 +505,7 @@ function Dashboard() {
             </div>
           </div>
         )}
+        
       </div>
     </div>
   )

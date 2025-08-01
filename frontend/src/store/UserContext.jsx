@@ -155,6 +155,25 @@ export const UserProvider = ({ children }) => {
     localStorage.removeItem(USER_KEY)
     setError(null)
   }
+  const getAllUsers= async ()=>{
+    setLoading(true)
+    setError(null)
+    try {
+      const token = localStorage.getItem(TOKEN_KEY);
+      if (!token) throw new Error('Not authenticated');
+
+      const data = await makeApiCall('/users', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      return await data; // Return the list of users
+    } catch (err) {
+      setError(err.message);
+      throw err; // Re-throw so the component can handle the error
+    } finally {
+      setLoading(false);
+    }
+  }
 
   const isAdmin = () => currentUser?.role === 'admin'
   const isStationMaster = () => currentUser?.role === 'station_master'
@@ -170,7 +189,8 @@ export const UserProvider = ({ children }) => {
     logout,
     isAdmin,
     isStationMaster,
-    isUser
+    isUser,
+    getAllUsers
   }
 
   return (
