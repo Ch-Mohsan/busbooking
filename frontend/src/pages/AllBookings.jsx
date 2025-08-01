@@ -10,19 +10,21 @@ const AllBookings = () => {
   const [updatingBooking, setUpdatingBooking] = useState(null)
 
   useEffect(() => {
-    if (currentUser && currentUser.role === 'admin') {
+    if (currentUser?.role === 'admin') {
       fetchAllBookings()
     }
   }, [currentUser])
 
-  // Filter bookings based on status and search term
+  // Filter bookings
   const filteredBookings = userBookings.filter(booking => {
     const matchesFilter = filter === 'all' || booking.status === filter
-    const matchesSearch = searchTerm === '' || 
-      booking.username?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      booking.fromStation?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      booking.toStation?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      booking._id?.toLowerCase().includes(searchTerm.toLowerCase())
+    const searchLower = searchTerm.toLowerCase()
+    const matchesSearch = !searchTerm || [
+      booking.username,
+      booking.fromStation,
+      booking.toStation,
+      booking._id
+    ].some(field => field?.toLowerCase().includes(searchLower))
     
     return matchesFilter && matchesSearch
   })
@@ -39,31 +41,25 @@ const AllBookings = () => {
     }
   }
 
+  // Utility functions
   const getStatusColor = (status) => {
-    switch (status) {
-      case 'confirmed': return 'text-green-600 bg-green-100'
-      case 'cancelled': return 'text-red-600 bg-red-100'
-      case 'pending': return 'text-yellow-600 bg-yellow-100'
-      default: return 'text-gray-600 bg-gray-100'
+    const colors = {
+      confirmed: 'text-green-600 bg-green-100',
+      cancelled: 'text-red-600 bg-red-100',
+      pending: 'text-yellow-600 bg-yellow-100'
     }
+    return colors[status] || 'text-gray-600 bg-gray-100'
   }
 
-  const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
-    })
-  }
+  const formatDate = (date) => new Date(date).toLocaleDateString('en-US', {
+    year: 'numeric', month: 'short', day: 'numeric'
+  })
 
-  const formatTime = (timeString) => {
-    return new Date(`2000-01-01T${timeString}`).toLocaleTimeString('en-US', {
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: true
-    })
-  }
+  const formatTime = (time) => new Date(`2000-01-01T${time}`).toLocaleTimeString('en-US', {
+    hour: '2-digit', minute: '2-digit', hour12: true
+  })
 
+  // Guard clauses
   if (currentUser?.role !== 'admin') {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -79,7 +75,7 @@ const AllBookings = () => {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
           <p className="mt-4 text-gray-600">Loading bookings...</p>
         </div>
       </div>
@@ -91,10 +87,10 @@ const AllBookings = () => {
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
           <h2 className="text-2xl font-bold text-red-600 mb-4">Error</h2>
-          <p className="text-gray-600">{error}</p>
+          <p className="text-gray-600 mb-4">{error}</p>
           <button 
             onClick={fetchAllBookings}
-            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
           >
             Retry
           </button>
@@ -103,62 +99,56 @@ const AllBookings = () => {
     )
   }
 
+  // Calculate stats
+  const stats = {
+    total: userBookings.length,
+    confirmed: userBookings.filter(b => b.status === 'confirmed').length,
+    pending: userBookings.filter(b => b.status === 'pending').length,
+    cancelled: userBookings.filter(b => b.status === 'cancelled').length
+  }
+
   return (
-    <div className="p-6">
+    <div className="p-4 lg:p-6">
+      {/* Header */}
       <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-800 mb-2">All Bookings</h1>
+        <h1 className="text-2xl lg:text-3xl font-bold text-gray-800 mb-2">All Bookings</h1>
         <p className="text-gray-600">Manage and view all bus bookings</p>
       </div>
 
-      {/* Filters and Search */}
+      {/* Search and Filter */}
       <div className="mb-6 flex flex-col sm:flex-row gap-4">
-        <div className="flex-1">
-          <input
-            type="text"
-            placeholder="Search by username, booking ID, or stations..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          />
-        </div>
-        <div>
-          <select
-            value={filter}
-            onChange={(e) => setFilter(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          >
-            <option value="all">All Status</option>
-            <option value="confirmed">Confirmed</option>
-            <option value="pending">Pending</option>
-            <option value="cancelled">Cancelled</option>
-          </select>
-        </div>
+        <input
+          type="text"
+          placeholder="Search by username, booking ID, or stations..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="flex-1 px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+        />
+        <select
+          value={filter}
+          onChange={(e) => setFilter(e.target.value)}
+          className="px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+        >
+          <option value="all">All Status</option>
+          <option value="confirmed">Confirmed</option>
+          <option value="pending">Pending</option>
+          <option value="cancelled">Cancelled</option>
+        </select>
       </div>
 
-      {/* Bookings Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        <div className="bg-blue-50 p-4 rounded-lg">
-          <h3 className="text-sm font-medium text-blue-600">Total Bookings</h3>
-          <p className="text-2xl font-bold text-blue-900">{userBookings.length}</p>
-        </div>
-        <div className="bg-green-50 p-4 rounded-lg">
-          <h3 className="text-sm font-medium text-green-600">Confirmed</h3>
-          <p className="text-2xl font-bold text-green-900">
-            {userBookings.filter(b => b.status === 'confirmed').length}
-          </p>
-        </div>
-        <div className="bg-yellow-50 p-4 rounded-lg">
-          <h3 className="text-sm font-medium text-yellow-600">Pending</h3>
-          <p className="text-2xl font-bold text-yellow-900">
-            {userBookings.filter(b => b.status === 'pending').length}
-          </p>
-        </div>
-        <div className="bg-red-50 p-4 rounded-lg">
-          <h3 className="text-sm font-medium text-red-600">Cancelled</h3>
-          <p className="text-2xl font-bold text-red-900">
-            {userBookings.filter(b => b.status === 'cancelled').length}
-          </p>
-        </div>
+      {/* Stats */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        {[
+          { label: 'Total Bookings', value: stats.total, color: 'blue' },
+          { label: 'Confirmed', value: stats.confirmed, color: 'green' },
+          { label: 'Pending', value: stats.pending, color: 'yellow' },
+          { label: 'Cancelled', value: stats.cancelled, color: 'red' }
+        ].map(({ label, value, color }) => (
+          <div key={label} className={`bg-${color}-50 p-4 rounded-lg`}>
+            <h3 className={`text-sm font-medium text-${color}-600`}>{label}</h3>
+            <p className={`text-2xl font-bold text-${color}-900`}>{value}</p>
+          </div>
+        ))}
       </div>
 
       {/* Bookings Table */}
@@ -172,57 +162,35 @@ const AllBookings = () => {
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Booking ID
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    User
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Route
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Date & Time
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Seats
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Amount
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Type
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Actions
-                  </th>
+                  {['Booking ID', 'User', 'Route', 'Date & Time', 'Seats', 'Amount', 'Status', 'Type', 'Actions'].map(header => (
+                    <th key={header} className="px-3 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      {header}
+                    </th>
+                  ))}
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="divide-y divide-gray-200">
                 {filteredBookings.map((booking) => (
                   <tr key={booking._id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                    <td className="px-3 lg:px-6 py-4 text-sm font-medium text-gray-900">
                       {booking._id?.slice(-8) || 'N/A'}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className="px-3 lg:px-6 py-4 text-sm text-gray-500">
                       {booking.username || 'Unknown'}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className="px-3 lg:px-6 py-4 text-sm text-gray-500">
                       <div>
                         <div className="font-medium">{booking.fromStation}</div>
                         <div className="text-gray-400">to {booking.toStation}</div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className="px-3 lg:px-6 py-4 text-sm text-gray-500">
                       <div>
                         <div className="font-medium">{formatDate(booking.date)}</div>
                         <div className="text-gray-400">{formatTime(booking.time)}</div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className="px-3 lg:px-6 py-4 text-sm">
                       <div className="flex flex-wrap gap-1">
                         {booking.seats?.map((seat, index) => (
                           <span key={index} className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded">
@@ -231,15 +199,15 @@ const AllBookings = () => {
                         ))}
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                    <td className="px-3 lg:px-6 py-4 text-sm font-medium text-gray-900">
                       Rs {booking.totalAmount?.toLocaleString() || 'N/A'}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(booking.status)}`}>
+                    <td className="px-3 lg:px-6 py-4">
+                      <span className={`px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(booking.status)}`}>
                         {booking.status}
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className="px-3 lg:px-6 py-4 text-sm text-gray-500">
                       <span className={`px-2 py-1 text-xs rounded ${
                         booking.travelType === 'business' 
                           ? 'bg-purple-100 text-purple-800' 
@@ -248,8 +216,8 @@ const AllBookings = () => {
                         {booking.travelType}
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <div className="flex space-x-2">
+                    <td className="px-3 lg:px-6 py-4 text-sm font-medium">
+                      <div className="flex flex-col lg:flex-row lg:space-x-2 space-y-1 lg:space-y-0">
                         {booking.status === 'pending' && (
                           <>
                             <button
