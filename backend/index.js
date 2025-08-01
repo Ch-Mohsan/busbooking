@@ -20,7 +20,7 @@ app.use('/api/bookings', bookingRoutes);
 
 const PORT = process.env.PORT || 5000;
 
-mongoose.connect(process.env.MONGO_URI, {
+mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/bus_booking', {
   useNewUrlParser: true,
   useUnifiedTopology: true,
 })

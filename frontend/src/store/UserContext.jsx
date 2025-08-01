@@ -70,14 +70,18 @@ export const UserProvider = ({ children }) => {
 
       localStorage.setItem(TOKEN_KEY, data.token)
       localStorage.setItem(USER_KEY, JSON.stringify(data.user))
-setCurrentUser({ ...data.user, token: data.token })
-console.log(data.token,'token from signup')
+      setCurrentUser({ ...data.user, token: data.token })
+      console.log(data.token,'token from signup')
 
       setIsAuthenticated(true)
       setError(null)
+      
+      // Return user data so the component can handle navigation
+      return data;
     } catch (err) {
       setError(err.message)
       setIsAuthenticated(false)
+      throw err; // Re-throw so the component can handle the error
     } finally {
       setLoading(false)
     }
@@ -92,6 +96,14 @@ console.log(data.token,'token from signup')
         method: 'POST',
         body: JSON.stringify(userData)
       });
+      
+      if (!data) {
+        setError('Login failed. Please try again.');
+        setIsAuthenticated(false);
+        throw new Error('Login failed. Please try again.');
+      }
+
+      console.log(data.user.role, 'user role from login');
 
       localStorage.setItem(TOKEN_KEY, data.token)
       localStorage.setItem(USER_KEY, JSON.stringify(data.user))
@@ -100,37 +112,40 @@ console.log(data.token,'token from signup')
 
       setIsAuthenticated(true)
       setError(null)
+      
+      // Return user data so the component can handle navigation
+      return data;
     } catch (err) {
       setError(err.message)
       setIsAuthenticated(false)
+      throw err; // Re-throw so the component can handle the error
     } finally {
       setLoading(false)
     }
   }
 
   // Fetch user profile (on reload)
- const fetchProfile = async (token) => {
-  setLoading(true)
-  setError(null)
-  try {
-    const data = await makeApiCall('/profile', {
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
+  const fetchProfile = async (token) => {
+    setLoading(true)
+    setError(null)
+    try {
+      const data = await makeApiCall('/profile', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
 
-    setCurrentUser({ ...data, token })  // ✅ Fix is here
-    setIsAuthenticated(true)
-    localStorage.setItem(USER_KEY, JSON.stringify(data))
-  } catch (err) {
-    setCurrentUser(null)
-    setIsAuthenticated(false)
-    localStorage.removeItem(TOKEN_KEY)
-    localStorage.removeItem(USER_KEY)
-    setError(err.message)
-  } finally {
-    setLoading(false)
+      setCurrentUser({ ...data, token })
+      setIsAuthenticated(true)
+      localStorage.setItem(USER_KEY, JSON.stringify(data))
+    } catch (err) {
+      setCurrentUser(null)
+      setIsAuthenticated(false)
+      localStorage.removeItem(TOKEN_KEY)
+      localStorage.removeItem(USER_KEY)
+      setError(err.message)
+    } finally {
+      setLoading(false)
+    }
   }
-}
-
 
   // Logout
   const logout = () => {

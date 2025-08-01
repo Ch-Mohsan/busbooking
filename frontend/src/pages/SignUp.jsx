@@ -47,7 +47,7 @@ function SignUp() {
         password: formData.password,
         role: formData.role,
       });
-      if(res.ok){
+      if(res.token){
 
   
         navigate('/login');  }
@@ -55,7 +55,7 @@ function SignUp() {
         setError('Registration failed. Please try again.');
         }
     } catch (err) {
-      setError('Registration failed. Please try again.');
+      setError('Registration failed. Server Error.');
     } finally {
       setLoading(false);
     }

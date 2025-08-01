@@ -27,27 +27,28 @@ function Login() {
 
     try {
       if (formData.email && formData.password) {
-        const result = await login({
+         const res= await login({
           email: formData.email,
           password: formData.password,
         });
-        
-        // Check if login was successful and redirect based on user role
-        if (result && result.user) {
-          const userRole = result.user.role;
-          
-          if (userRole === 'admin') {
-            navigate('/dashboard');
+        console.log(res, 'response from login');
+        if (res.token) {
+          if (res.user.role === 'station_master' && res.user.status === 'pending') {
+            setError('Your account is pending approval by the admin.');
           }
-          else if (userRole === 'station_master') {
-            navigate('/dashboard');
+          else if (res.user.role === 'station_master'&& res.user.status === 'active') {
+            navigate('/dashboard'); // Redirect to station master dashboard
           }
-          else {
-            navigate('/');
+           else if (res.user.role === 'admin') {
+            navigate('/admin-dashboard'); // Redirect to admin dashboard for admins
+          } else {
+            navigate('/user-dashboard'); // Redirect to user dashboard for regular users
           }
+          navigate('/'); // Redirect to home or dashboard after successful login
         } else {
-          setError('Invalid email or password');
+          setError('Invalid credentials. Please try again.');
         }
+       
       } else {
         setError('Please fill in all fields');
       }

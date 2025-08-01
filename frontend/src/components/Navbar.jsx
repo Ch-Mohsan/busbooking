@@ -1,12 +1,15 @@
 import React from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useUser } from '../store/UserContext'
 
+
 function Navbar({ onMenuToggle, isMobileMenuOpen }) {
+  const navigate=useNavigate()
   const { currentUser, logout, isAuthenticated } = useUser()
 
   const handleLogout = () => {
     logout()
+    navigate('/login') // Redirect to login after logout
   }
 
   return (
