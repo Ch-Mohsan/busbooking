@@ -67,7 +67,7 @@ exports.updateUserStatus = async (req, res) => {
     const { id } = req.params; // Get user ID from URL params instead of body
     const { status, assignedStation } = req.body;
     
-    console.log('Received request to update user:', id);
+    console.log('Received request to update user:',assignedStation);
     console.log('Update data:', { status, assignedStation });
     
     if (!id || !status) {

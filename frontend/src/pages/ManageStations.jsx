@@ -76,6 +76,7 @@ const ManageStations = () => {
           }
         })
       }
+      console.log(updateData, 'Update data for user status')
 
       const response = await fetch(`${API_BASE_URL}/users/${editingUser._id}/status`, {
         method: 'PUT',

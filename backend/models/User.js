@@ -14,11 +14,11 @@ const userSchema = new mongoose.Schema({
       return this.role === 'station_master' ? 'pending' : 'active';
     },
   },
-  stationId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Station',
-    default: null,
-  },
+  assignedStation: {
+    stationId: String,
+    stationName: String
+  }
+
 }, { timestamps: true });
 
 module.exports = mongoose.model('User', userSchema);

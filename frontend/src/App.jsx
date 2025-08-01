@@ -11,6 +11,7 @@ import AddBooking from './pages/AddBooking'
 import ShowBooking from './pages/Showbooking'
 import AllBookings from './pages/AllBookings'
 import ManageStations from './pages/ManageStations'
+import StationsBookings from './pages/StationsBookings'
 
 function App() {
   const location = useLocation();
@@ -35,6 +36,7 @@ function App() {
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path='all-bookings' element={<AllBookings/>}/>
                 <Route path='stations' element={<ManageStations/>}/>
+                <Route path='/station-bookings' element={<StationsBookings/>}/>
               </Routes>
             </Layout>
           )}

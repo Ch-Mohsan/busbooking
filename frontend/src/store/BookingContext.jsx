@@ -140,7 +140,7 @@ export const BookingProvider = ({ children }) => {
         status: currentUser.role === 'admin' ? 'confirmed' : 'pending', // Admin bookings auto-confirmed
         bookingDate: new Date().toISOString()
       }
-
+      console.log(bookingPayload, 'booking payload')
       const newBooking = await BookingServices.createBooking(bookingPayload, currentUser.token)
       
       // Refresh user bookings
@@ -285,9 +285,7 @@ export const BookingProvider = ({ children }) => {
     getBookingById,
     loadStations,
     fetchAllBookings,
-    updateBookingStatus, // Add this new function
-    
-    // Helper function to refresh stations after adding new ones
+    updateBookingStatus, 
     refreshStations: loadStations
   }
 
