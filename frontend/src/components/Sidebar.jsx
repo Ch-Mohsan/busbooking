@@ -33,10 +33,11 @@ function Sidebar({ onItemClick }) {
   ]
 
   const allItems = [
-    ...navigationItems,
-    ...(isAdmin() ? adminItems : []),
-    ...(isStationMaster() ? stationMasterItems : [])
-  ]
+  ...(!isAdmin() ? navigationItems : []),
+  ...(isAdmin() ? adminItems : []),
+  ...(isStationMaster() ? stationMasterItems : [])
+]
+
 
   return (
     <div className="h-full w-56 bg-white border-r border-gray-200 shadow-xl lg:shadow-none lg:bg-[#f8fafc] lg:border-[#78B9B5]">
