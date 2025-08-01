@@ -160,15 +160,16 @@ export const BookingProvider = ({ children }) => {
     }
   }
 
-  // Update booking status (admin only)
+  // Update booking status (admin and station_master can do this)
   const updateBookingStatus = async (bookingId, newStatus) => {
     try {
       if (!currentUser?.token) {
         throw new Error('User must be logged in to update booking status')
       }
 
-      if (currentUser.role !== 'admin') {
-        throw new Error('Only admin can update booking status')
+      // Allow both admin and station_master to update booking status
+      if (currentUser.role !== 'admin' && currentUser.role !== 'station_master') {
+        throw new Error('Only admin and station masters can update booking status')
       }
 
       setLoading(true)
@@ -212,14 +213,14 @@ export const BookingProvider = ({ children }) => {
   const cancelBooking = async (bookingId) => {
     try {
       if (!currentUser?.token) {
-        console.log(currentUser ,'user token not found, cannot cancel booking')
+        console.log(currentUser, 'user token not found, cannot cancel booking')
         throw new Error('User must be logged in to cancel booking')
       }
 
       setLoading(true)
       
-      if (currentUser.role === 'admin') {
-        // Admin can update status to cancelled
+      if (currentUser.role === 'admin' || currentUser.role === 'station_master') {
+        // Admin and station masters can update status to cancelled
         await updateBookingStatus(bookingId, 'cancelled')
       } else {
         // Regular user cancellation
@@ -251,9 +252,17 @@ export const BookingProvider = ({ children }) => {
     }
   }
 
+  // Fetch all bookings (admin and station_master can access this)
   const fetchAllBookings = async () => {
     try {
       if (!currentUser?.token) {
+        setUserBookings([])
+        return
+      }
+
+      // Allow both admin and station_master to fetch all bookings
+      if (currentUser.role !== 'admin' && currentUser.role !== 'station_master') {
+        console.warn('User does not have permission to fetch all bookings')
         setUserBookings([])
         return
       }
