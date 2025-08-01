@@ -174,7 +174,7 @@ export const UserProvider = ({ children }) => {
       setLoading(false);
     }
   }
-
+ 
   const isAdmin = () => currentUser?.role === 'admin'
   const isStationMaster = () => currentUser?.role === 'station_master'
   const isUser = () => currentUser?.role === 'user'

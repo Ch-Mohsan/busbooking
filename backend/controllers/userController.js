@@ -62,19 +62,43 @@ exports.getAllUsers=async(req,res)=>{
     
   }
 }
-exports.updateUserStatus= async (req, res) => {
+exports.updateUserStatus = async (req, res) => {
   try {
-    const { userId, status } = req.body;
-    if (!userId || !status) {
+    const { id } = req.params; // Get user ID from URL params instead of body
+    const { status, assignedStation } = req.body;
+    
+    console.log('Received request to update user:', id);
+    console.log('Update data:', { status, assignedStation });
+    
+    if (!id || !status) {
       return res.status(400).json({ message: 'User ID and status are required' });
     }
-    const user = await User.findByIdAndUpdate(userId, { status }, { new: true });
+
+    // Prepare update data
+    const updateData = { status };
+    
+    // If assigning a station (when approving), add station details
+    if (status === 'approved' && assignedStation) {
+      updateData.assignedStation = assignedStation;
+    }
+
+    const user = await User.findByIdAndUpdate(id, updateData, { new: true });
+    
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
-    res.json({ message: 'User status updated successfully', user });
+
+    console.log('User updated successfully:', user);
+    res.json({ 
+      message: 'User status updated successfully', 
+      user 
+    });
     
   } catch (error) {
-    
+    console.error('Error updating user status:', error);
+    res.status(500).json({ 
+      message: 'Error updating user status', 
+      error: error.message 
+    });
   }
-}
+};
