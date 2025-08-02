@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react'
+import React, { useEffect, useState, useMemo, useCallback } from 'react'
 import { useBooking } from '../store/BookingContext'
 import { useUser } from '../store/UserContext'
 
@@ -8,6 +8,7 @@ const StationsBookings = () => {
   const [filter, setFilter] = useState('all')
   const [searchTerm, setSearchTerm] = useState('')
   const [updatingBooking, setUpdatingBooking] = useState(null)
+  const [dataFetched, setDataFetched] = useState(false)
 
   // Check authorization and get station data
   const isAuthorized = currentUser?.role === 'admin' || currentUser?.role === 'station_master'
@@ -39,14 +40,34 @@ const StationsBookings = () => {
     })
   }, [stationBookings, filter, searchTerm])
 
-  // Fetch data on mount
-  useEffect(() => {
-    if (isAuthorized && !userLoading) {
-      fetchAllBookings()
+  // Memoized fetch function
+  const loadBookings = useCallback(async () => {
+    if (!currentUser?.token || !isAuthorized) {
+      return
     }
-  }, [isAuthorized, userLoading])
 
-  // Handle status updates - Allow both admin and station_master
+    try {
+      console.log('Fetching bookings for user:', currentUser.username, 'Role:', currentUser.role)
+      await fetchAllBookings()
+      setDataFetched(true)
+    } catch (err) {
+      console.error('Error fetching bookings:', err)
+      setDataFetched(true) // Still set to true to avoid infinite loading
+    }
+  }, [currentUser?.token, currentUser?.role, isAuthorized, fetchAllBookings])
+
+  // Fetch data when user becomes available and authorized
+  useEffect(() => {
+    if (!userLoading && currentUser && isAuthorized && !dataFetched) {
+      console.log('User loaded, fetching bookings...')
+      loadBookings()
+    } else if (!userLoading && (!currentUser || !isAuthorized)) {
+      // User is loaded but not authorized or not logged in
+      setDataFetched(true)
+    }
+  }, [userLoading, currentUser, isAuthorized, dataFetched, loadBookings])
+
+  // Handle status updates
   const handleStatusUpdate = async (bookingId, newStatus) => {
     try {
       setUpdatingBooking(bookingId)
@@ -58,6 +79,12 @@ const StationsBookings = () => {
       setUpdatingBooking(null)
     }
   }
+
+  // Retry function
+  const handleRetry = useCallback(() => {
+    setDataFetched(false)
+    loadBookings()
+  }, [loadBookings])
 
   // Utility functions
   const getStatusColor = (status) => {
@@ -77,39 +104,66 @@ const StationsBookings = () => {
     hour: '2-digit', minute: '2-digit', hour12: true
   })
 
-  // Loading states
-  if (userLoading || loading) {
+  // Show loading while user is loading
+  if (userLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen px-4">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading...</p>
+          <p className="mt-4 text-gray-600">Loading user data...</p>
         </div>
       </div>
     )
   }
 
-  // Authorization check
+  // Show error if user not logged in
+  if (!currentUser) {
+    return (
+      <div className="flex items-center justify-center min-h-screen px-4">
+        <div className="text-center">
+          <h2 className="text-xl sm:text-2xl font-bold text-red-600 mb-4">Not Logged In</h2>
+          <p className="text-gray-600">Please log in to access this page.</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Show access denied if not authorized
   if (!isAuthorized) {
     return (
       <div className="flex items-center justify-center min-h-screen px-4">
         <div className="text-center">
           <h2 className="text-xl sm:text-2xl font-bold text-red-600 mb-4">Access Denied</h2>
           <p className="text-gray-600">You don't have permission to view this page.</p>
+          <p className="text-sm text-gray-500 mt-2">
+            Current role: {currentUser?.role || 'Unknown'}
+          </p>
         </div>
       </div>
     )
   }
 
-  // Error state
-  if (error) {
+  // Show loading while fetching bookings data
+  if (!dataFetched && loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen px-4">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading bookings...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Show error state
+  if (error && !userBookings?.length) {
     return (
       <div className="flex items-center justify-center min-h-screen px-4">
         <div className="text-center">
           <h2 className="text-xl sm:text-2xl font-bold text-red-600 mb-4">Error</h2>
           <p className="text-gray-600 mb-4 text-sm sm:text-base">{error}</p>
           <button 
-            onClick={fetchAllBookings}
+            onClick={handleRetry}
             className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm sm:text-base"
           >
             Retry
@@ -135,8 +189,19 @@ const StationsBookings = () => {
           {isAdmin ? 'All Station Bookings' : 'Station Bookings'}
         </h1>
         <p className="text-sm sm:text-base text-gray-600">
-          {isAdmin ? 'Manage all station bookings' : `Station: ${currentUser?.assignedStation?.stationName || stationId}`}
+          {isAdmin ? 'Manage all station bookings' : `Station: ${currentUser?.assignedStation?.stationName || stationId || 'Unknown'}`}
         </p>
+        
+        {/* Show refresh indicator when data is being updated */}
+        {loading && dataFetched && (
+          <div className="flex items-center mt-2">
+            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+            <span className="ml-2 text-sm text-gray-500">Refreshing...</span>
+          </div>
+        )}
+        
+        
+       
       </div>
 
       {/* Search and Filter */}
@@ -158,6 +223,15 @@ const StationsBookings = () => {
           <option value="pending">Pending</option>
           <option value="cancelled">Cancelled</option>
         </select>
+        
+        {/* Manual refresh button */}
+        <button
+          onClick={handleRetry}
+          disabled={loading}
+          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 text-sm sm:text-base"
+        >
+          {loading ? 'Refreshing...' : 'Refresh'}
+        </button>
       </div>
 
       {/* Stats */}
@@ -179,7 +253,12 @@ const StationsBookings = () => {
       <div className="bg-white rounded-lg shadow overflow-hidden">
         {filteredBookings.length === 0 ? (
           <div className="text-center py-8 sm:py-12 px-4">
-            <p className="text-gray-500 text-sm sm:text-base">No bookings found</p>
+            <p className="text-gray-500 text-sm sm:text-base">
+              {userBookings?.length === 0 
+                ? 'No bookings found for your station' 
+                : 'No bookings match your filters'
+              }
+            </p>
             {(searchTerm || filter !== 'all') && (
               <button
                 onClick={() => { setSearchTerm(''); setFilter('all') }}
