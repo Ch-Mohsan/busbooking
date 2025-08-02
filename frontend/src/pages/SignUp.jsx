@@ -6,6 +6,7 @@ function SignUp() {
   const [formData, setFormData] = useState({
     username: '',
     email: '',
+    contactNumber: '',
     password: '',
     confirmPassword: '',
     role: 'user'
@@ -29,7 +30,7 @@ function SignUp() {
     setLoading(true);
 
     try {
-      if (!formData.username || !formData.email || !formData.password) {
+      if (!formData.username || !formData.email || !formData.password || !formData.confirmPassword || !formData.contactNumber) {
         setError('Please fill in all fields');
         return;
       }
@@ -44,13 +45,15 @@ function SignUp() {
       const res= await signup({
         username: formData.username,
         email: formData.email,
+        contactNumber: formData.contactNumber,
         password: formData.password,
         role: formData.role,
       });
       if(res.token){
 
   
-        navigate('/login');  }
+        navigate('/login');
+      console.log(formData,'Data of User')  }
         else{
         setError('Registration failed. Please try again.');
         }
@@ -105,6 +108,16 @@ function SignUp() {
             <option value="station_master">Station Master</option>
             <option value="admin">Admin/Owner</option>
           </select>
+          <input
+           id='contactNumber'
+           name='contactNumber'
+            type='number'
+            autoComplete='contactNumber' 
+            required 
+            placeholder='Contact Number'
+             className="block w-full px-3 py-2 border border-[#78B9B5] rounded text-[#065084] focus:outline-none"
+             onChange={handleChange}/>
+
           <input
             id="password"
             name="password"

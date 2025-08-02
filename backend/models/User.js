@@ -17,7 +17,10 @@ const userSchema = new mongoose.Schema({
   assignedStation: {
     stationId: String,
     stationName: String
-  }
+  },
+  contactNumber: { type: String, required: true },
+
+
 
 }, { timestamps: true });
 
