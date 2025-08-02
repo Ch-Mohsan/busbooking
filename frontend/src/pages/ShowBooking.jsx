@@ -13,6 +13,7 @@ function ShowBooking() {
 
   useEffect(() => {
     if (currentUser?.token) {
+      console.log(currentUser, '/////////////////////Current User Data')
       if (isAdmin()) {
         // fetchAllBookings(); // This function doesn't exist in your BookingContext
         fetchUserBookings(); // Using available function for now
@@ -282,6 +283,10 @@ function ShowBooking() {
                         <div className="flex justify-between">
                           <span className="text-sm text-gray-600">Passenger:</span>
                           <span className="text-sm font-medium text-gray-900">{booking.username}</span>
+                        </div>
+                         <div className="flex justify-between">
+                          <span className="text-sm text-gray-600">ContactNum:</span>
+                          <span className="text-sm font-medium text-gray-900">{currentUser.contactNumber}</span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-sm text-gray-600">Seats:</span>

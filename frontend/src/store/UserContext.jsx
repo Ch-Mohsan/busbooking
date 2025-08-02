@@ -103,7 +103,7 @@ export const UserProvider = ({ children }) => {
         throw new Error('Login failed. Please try again.');
       }
 
-      console.log(data.user.role, 'user role from login');
+      console.log(data.user.role, '.........................user role from login');
 
       localStorage.setItem(TOKEN_KEY, data.token)
       localStorage.setItem(USER_KEY, JSON.stringify(data.user))

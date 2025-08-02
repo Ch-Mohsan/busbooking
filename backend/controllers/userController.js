@@ -6,6 +6,7 @@ const jwt = require('jsonwebtoken');
 exports.register = async (req, res) => {
   try {
     const { username, email,contactNumber,password, role } = req.body;
+    console.log('Received registration data:', { username, email, contactNumber, role });
     if (!username || !email || !password) {
       return res.status(400).json({ message: 'All fields are required' });
     }
@@ -36,7 +37,7 @@ exports.login = async (req, res) => {
     const token = jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, { expiresIn: '7d' });
     res.status(200).json({
       token,
-      user: { id: user._id, username: user.username, email: user.email, role: user.role,status:user.status  }
+      user: { id: user._id, username: user.username, email: user.email,contactNumber:user.contactNumber, role: user.role,status:user.status  }
     });
   } catch (err) {
     res.status(500).json({ message: 'Server error', error: err.message });

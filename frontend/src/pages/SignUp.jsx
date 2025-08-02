@@ -38,6 +38,10 @@ function SignUp() {
         setError('Passwords do not match');
         return;
       }
+      if (!/^\d{10}$/.test(formData.contactNumber)) {
+        setError('Contact number must be 10 digits');
+        return;
+      }
       if (formData.password.length < 6) {
         setError('Password must be at least 6 characters');
         return;
